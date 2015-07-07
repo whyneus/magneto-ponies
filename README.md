@@ -21,3 +21,7 @@ Install preferred stack and PHP 5.4 on a RHEL6 Dedicated server.
 
 ###### solr362-install
 Install Apache Solr 3.6.2 on a RHEL6 or RHEL7 server (Cloud or Dedicated).
+
+###### single-stack-install.sh
+Installs Apache, PHP-FPM, Percona, Redis, Memcached. Configures VirtualHost and FPM pool. 
+User input required: PHP version (5.4 or 5.5), domain/user/database names. Can skip DB setup if DB will be elsewhere. 
