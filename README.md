@@ -18,6 +18,8 @@ Install preferred stack and PHP 5.3 on a RHEL6 Dedicated server.
 ###### magento-webphpfpm-dedi-php54
 Install preferred stack and PHP 5.4 on a RHEL6 Dedicated server.
 
+###### magento-redis.sh
+Installs Redis from IUS and configures for Magento use. Also sets up Redis cleanup cron job for primary user. 
 
 ###### solr362-install
 Install Apache Solr 3.6.2 on a RHEL6 or RHEL7 server (Cloud or Dedicated).
