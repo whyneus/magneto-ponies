@@ -1,0 +1,301 @@
+#!/bin/bash
+
+echo -e "Database server"
+
+if [[ `whoami` != 'root' ]]
+then
+  echo "Script must be run as root. Exiting..."
+  exit 1
+fi
+
+echo -ne "\nDatabase name: "
+read DBNAME
+
+if [[ ! -z ${DBNAME} ]]
+then
+  echo -ne "Username: "
+  read DBUSER
+
+  if [[ -z ${DBUSER} ]] || [[ ${#DBUSER} -gt 16 ]]
+  then
+    echo -ne "Associated MySQL user required and must be 16 characters or less.\nExiting...\n"
+    exit 1
+  fi
+
+  echo -ne "Host [localhost]: "
+  read DBHOST
+  if [[ -z ${DBHOST} ]]
+  then
+    DBHOST=localhost
+  fi
+else
+  echo -ne "No database name provided.\nNo database will be created."
+fi
+
+echo -e "\nChecking repositories..."
+YUM=`yum repolist | grep ius`
+if [[ ! -z "$YUM" ]];
+then
+  echo "IUS Found. Continuing..."
+else
+  if [[ -f /root/.rackspace/server_number ]]
+  then
+    SERVERNUMBER=`head -n1 /root/.rackspace/server_number`
+    echo "Subscribe server to IUS repository in RHN Bridge: https://portal.rhn.rackspace.com/search?search_type=systems&search_string=${SERVERNUMBER}&do=search"
+    exit 1
+  else
+    echo "Subscribing to IUS..."
+    iusrelease=`curl -s http://dl.iuscommunity.org/pub/ius/stable/CentOS/6/x86_64/ | grep ius-release | cut -d\" -f8`
+    yum -y install http://dl.iuscommunity.org/pub/ius/stable/CentOS/6/x86_64/${iusrelease}
+    rpm --import /etc/pki/rpm-gpg/IUS-COMMUNITY-GPG-KEY
+  fi
+fi
+
+MEMORY=`cat /proc/meminfo | grep MemTotal | awk 'OFMT="%.0f" {sum=$2/1024/1024}; END {print sum}'`
+if [[ ${MEMORY} -lt 4 ]]
+then
+  echo -e "\nInstalled memory less than 4GB.\nWe need at least 2GB for memcached on top of MySQL.\nAborting..."
+  exit 1
+fi
+
+if [[ ${MEMORY} -lt 12 ]]
+then
+  INNODBMEM=`printf "%.0f" $(bc <<< ${MEMORY}*0.75)`
+else
+  INNODBMEM=6
+fi
+
+if [[ -f /usr/local/psa/version ]]
+then
+  echo -e "\nPlesk `cat /usr/local/psa/version | awk '{print $1}'` detected.\nAborting."
+  exit 1
+fi
+
+PREPDIRCHECK=`ls /home/rack/ | grep magentodbsetup`
+if [[ -z "$PREPDIRCHECK" ]]
+then
+  PREPDIRREUSE="0"
+  PREPDIR="/home/rack/magentodbsetup-`date +%Y%m%d`_`/bin/date +%H%M`"
+  echo -e "\nCreating prep directory.\nOur working directory will be ${PREPDIR}."
+  mkdir $PREPDIR
+else
+  PREPDIRREUSE="1"
+  PREPDIR="/home/rack/${PREPDIRCHECK}"
+  echo -e "\nPrevious prep directory detected.\nReusing ${PREPDIR}."
+fi
+
+if [[ -f /etc/my.cnf ]] && [[ -f ${PREPDIR}/my.cnf.new ]]
+then
+  MY1=`md5sum /etc/my.cnf | awk '{print $1}'`
+  MY2=`md5sum ${PREPDIR}/my.cnf.new | awk '{print $1}'`
+  if [[ "$MY1" != "$MY2" ]]
+  then
+    MYSQLRECONFIG=1
+    NEEDSSECUREINSTALL=0
+  fi
+else
+  NEEDSSECUREINSTALL=1
+  echo "[mysqld]
+
+## General
+datadir                              = /var/lib/mysql
+socket                               = /var/lib/mysql/mysql.sock
+tmpdir                               = /dev/shm
+
+## Cache
+table-definition-cache               = 4096
+table-open-cache                     = 4096
+query-cache-size                     = 64M
+query-cache-type                     = 1
+query-cache-limit                    = 2M
+
+
+join-buffer-size                    = 2M
+read-buffer-size                    = 2M
+read-rnd-buffer-size                = 8M
+sort-buffer-size                    = 2M
+
+## Temp Tables
+max-heap-table-size                 = 96M
+tmp-table-size                      = 96M
+
+## Networking
+#interactive-timeout                 = 3600
+max-connections                      = 500
+max-user-connections                 = 400
+
+max-connect-errors                   = 1000000
+max-allowed-packet                   = 256M
+slave-net-timeout                    = 60
+skip-name-resolve
+wait-timeout                         = 600
+
+## MyISAM
+key-buffer-size                      = 32M
+#myisam-recover                      = FORCE,BACKUP
+myisam-sort-buffer-size              = 256M
+
+## InnoDB
+#innodb-autoinc-lock-mode            = 2
+innodb-buffer-pool-size              = ${INNODBMEM}G
+#innodb-file-format                  = Barracuda
+innodb-file-per-table                = 1
+innodb-log-file-size                 = 200M
+
+#innodb-flush-method                 = O_DIRECT
+#innodb-large-prefix                 = 0
+#innodb-lru-scan-depth               = 1000
+#innodb-io-capacity                  = 1000
+innodb-purge-threads                 = 4
+innodb-thread-concurrency            = 32
+innodb_lock_wait_timeout             = 300
+
+## Replication and PITR
+#auto-increment-increment            = 2
+#auto-increment-offset               = 1
+#binlog-format                       = ROW
+#expire-logs-days                     = 5
+#log-bin                             = /var/log/mysql/bin-log
+#log-slave-updates                   = 1
+#max-binlog-size                      = 128M
+#read-only                           = 1
+#relay-log                            = /var/log/mysql/relay-log
+#relay-log-space-limit                = 16G
+#server-id                            = 1
+#slave-compressed-protocol           = 1
+#slave-sql-verify-checksum           = 1
+#sync-binlog                         = 1
+#sync-master-info                    = 1
+#sync-relay-log                      = 1
+#sync-relay-log-info                 = 1
+
+## Logging
+log-output                           = FILE
+log-slow-admin-statements
+log-slow-slave-statements
+#log-warnings                        = 0
+long-query-time                      = 4
+slow-query-log                       = 1
+slow-query-log-file                  = /var/lib/mysqllogs/slow-log
+
+## SSL
+#ssl-ca                              = /etc/mysql-ssl/ca-cert.pem
+#ssl-cert                            = /etc/mysql-ssl/server-cert.pem
+#ssl-key                             = /etc/mysql-ssl/server-key.pem
+
+[mysqld_safe]
+log-error                            = /var/log/mysqld.log
+#malloc-lib                          = /usr/lib64/libjemalloc.so.1
+open-files-limit                     = 65535
+
+[mysql]
+no-auto-rehash" > /etc/my.cnf
+fi
+
+INNODBLOG=`cat /etc/my.cnf | egrep ^innodb_log_file_size | cut -d= -f2 | tr -d [A-Z][a-z]`
+INNODBBUFFER=`cat /etc/my.cnf | egrep ^innodb_buffer_pool_size | cut -d= -f2 | tr -d [A-Z][a-z]`
+INNODBMAXPACKET=`cat /etc/my.cnf | egrep ^max_allowed_packet | cut -d= -f2 | tr -d [A-Z][a-z]`
+
+if [[ $PREPDIRREUSE == "0" ]] || [[ $MYSQLRECONFIG == "1" ]]
+then
+  echo -e "\nUpdating my.cnf."
+  wget -q -P $PREPDIR 'https://raw.github.com/abg/upgrade-my.cnf/master/rsdba/upgrade_mysql_config.py'
+  cp -a /etc/my.cnf ${PREPDIR}/my.cnf.old
+  /usr/bin/python ${PREPDIR}/upgrade_mysql_config.py -l error --config ${PREPDIR}/my.cnf.old --target 5.5 > ${PREPDIR}/my.cnf.new 2>&1
+  if [[ -z ${INNODBLOG} ]] || [[ ${INNODBLOG} -lt 100 ]]
+  then
+    sed -i 's/^innodb_log_file_size/\#innodb_log_file_size/g' ${PREPDIR}/my.cnf.new
+    sed -i '/^\[mysqld\]/ s:$:\ninnodb_log_file_size=200M:' ${PREPDIR}/my.cnf.new
+  fi
+  if [[ -z ${INNODBBUFFER} ]] || [[ ${INNODBBUFFER} -lt 2048 ]]
+  then
+    sed -i 's/^innodb_buffer_pool_size/\#innodb_buffer_pool_size/g' ${PREPDIR}/my.cnf.new
+    sed -i '/^\[mysqld\]/ s:$:\ninnodb_buffer_pool_size=2048M:' ${PREPDIR}/my.cnf.new
+  fi
+  if [[ -z ${INNODBMAXPACKET} ]] || [[ ${INNODBMAXPACKET} -lt 32 ]]
+  then
+    sed -i 's/^max_allowed_packet/\#max_allowed_packet/g' ${PREPDIR}/my.cnf.new
+    sed -i '/^\[mysqld\]/ s:$:\nmax_allowed_packet=32M:' ${PREPDIR}/my.cnf.new
+  fi
+  cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
+  echo -e "\nDone."
+else
+  echo -e "\nmy.cnf already updated.\nContinuing..."
+fi
+
+MYSQLVERSION=`mysqladmin version | grep Server | awk '{print $3}'`
+MYSQLRPM=`rpm -qa | grep mysql55-server`
+if [[ -z $MYSQLRPM ]]
+then
+  echo -e "\nUpdating MySQL ${MYSQLVERSION} to latest 5.5."
+  yum -q -y install yum-plugin-replace
+  yum -q -y replace mysql-server --replace-with mysql55-server
+  rm -f /var/lib/mysql/ib_logfile*
+  /etc/init.d/mysqld start
+  /usr/bin/mysql_upgrade
+  /etc/init.d/mysqld restart
+  chkconfig mysqld on
+  echo -e "\nDone."
+else
+  echo -e "\n${MYSQLRPM} appears to already be installed.\nContinuing..."
+fi
+
+echo -e "Moving to Percona 5.6."
+yum -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm
+/etc/init.d/mysqld stop
+rpm -e --nodeps mysql55 mysql55-libs mysql55-server
+yum -y install Percona-Server-server-56 Percona-Server-client-56 Percona-Server-shared-56
+cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
+mkdir /var/lib/mysqltmp
+mkdir /var/lib/mysqllogs
+chmod 1770 /var/lib/mysqltmp
+chown mysql:mysql /var/lib/mysqltmp
+chown mysql:mysql /var/lib/mysqllogs
+chkconfig mysql on
+/etc/init.d/mysql start
+/usr/bin/mysql_upgrade
+mysql -e "CREATE FUNCTION fnv1a_64 RETURNS INTEGER SONAME 'libfnv1a_udf.so'"
+mysql -e "CREATE FUNCTION fnv_64 RETURNS INTEGER SONAME 'libfnv_udf.so'"
+mysql -e "CREATE FUNCTION murmur_hash RETURNS INTEGER SONAME 'libmurmur_udf.so'"
+
+echo -e "Securing the MySQL install..."
+if [[ ${NEEDSSECUREINSTALL} == 1 ]]
+then
+  MYSQLROOTPASS=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n1`
+  mysql -uroot -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1')"
+  mysql -uroot -e "DELETE FROM mysql.user WHERE User=''"
+  mysql -uroot -e "DROP DATABASE test"
+  mysql -uroot -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\_%'"
+  mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('${MYSQLROOTPASS}') WHERE User='root'"
+
+  echo "[client]
+user=root
+password=${MYSQLROOTPASS}" > /root/.my.cnf
+  else
+    echo -ne "not required."
+fi
+
+/etc/init.d/mysql restart
+
+if [[ ! -z ${DBNAME} ]]
+then
+  MYSQLUSERPASS=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n1`
+  echo -ne "Creating database and user..."
+  mysql -uroot -e "CREATE DATABASE ${DBNAME}"
+  mysql -uroot -e "GRANT ALL PRIVILEGES ON ${DBNAME}.* to ${DBUSER}@'${DBHOST}' IDENTIFIED BY '${MYSQLUSERPASS}'"
+  if [[ ${DBHOST} == "localhost" ]]
+  then
+    mysql -uroot -e "GRANT ALL PRIVILEGES ON ${DBNAME}.* to ${DBUSER}@'127.0.0.1' IDENTIFIED BY '${MYSQLUSERPASS}'"
+  fi
+  echo -ne "done"
+fi
+
+if [[ ${NEEDSSECUREINSTALL} == 1 ]]
+then
+  echo -e "\n\nMySQL Username: root\nMySQL Password: ${MYSQLROOTPASS}"
+fi
+
+if [[ ! -z ${DBNAME} ]]
+then
+  echo -e "\nMySQL Database: ${DBNAME}\nMySQL Username: ${DBUSER}\nMySQL Password: ${MYSQLUSERPASS}"
+fi

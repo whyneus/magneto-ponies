@@ -1,0 +1,93 @@
+#!/bin/bash
+
+echo -e "Webserver Standard - Apache PHP Module"
+
+echo -ne "\nEnter DB server IP [X.X.X.X]: "
+read DBIP
+if [[ -z ${DBIP} ]]
+then
+  DBIP="X.X.X.X"
+fi
+
+if [[ -f /usr/local/psa/version ]]
+then
+  echo -e "\nPlesk `cat /usr/local/psa/version | awk '{print $1}'` detected.\nThis script does not take Plesk configurations into account.\nAborting."
+  exit 1
+fi
+
+echo -e "\nChecking repositories..."
+YUM=`yum repolist | grep ius`
+if [[ ! -z "$YUM" ]];
+then
+  echo "IUS Found. Continuing...."
+else
+  echo "Server must be subscribed to IUS repository."
+  exit 1
+fi
+
+MYSQLAVAILABLE=`rpm -qa | grep -e "mysql.*server.*"`
+echo -e "\nShutting down MySQL..."
+if [[ ! -z ${MYSQLAVAILABLE} ]]
+then
+  /etc/init.d/mysqld stop
+  chkconfig mysqld off
+  echo -e "\nDone."
+else
+  echo "mysql-server does not appear to be installed.\nContinuing..."
+fi
+
+PHPAVAILABLE=`rpm -qa | grep php53u`
+echo -e "\nUpdating PHP to 5.3..."
+if [[ -z ${PHPAVAILABLE} ]]
+then
+  yum -q -y install yum-plugin-replace
+  yum -q -y replace php --replace-with php53u
+  yum -q -y install php53u-mcrypt php53u-xmlrpc php53u-soap php53u-pecl-memcache php53u-pecl-apc
+  echo -e "\nDone."
+else
+  echo -e "\nphp53u appears to be installed.\nContinuing..."
+fi
+
+TIMEZONE=`cat /etc/sysconfig/clock | grep ZONE | cut -d\" -f2`
+echo -e "\nConfiguring PHP."
+if [[ -z ${TIMEZONE} ]]
+then
+  TIMEZONE="UTC"
+fi
+sed -ri 's/^;?apc.shm_size.*/apc.shm_size=256M/g' /etc/php.d/apc.ini
+sed -i 's/^safe_mode =.*/safe_mode = Off/g' /etc/php.ini
+sed -ri "s~^;?date.timezone =.*~date.timezone = ${TIMEZONE}~g" /etc/php.ini
+sed -i 's/^; *realpath_cache_size.*/realpath_cache_size = 128K/g' /etc/php.ini
+sed -i 's/^; *realpath_cache_ttl.*/realpath_cache_ttl = 7200/g' /etc/php.ini
+sed -i 's/^max_execution_time.*/max_execution_time = 1800/g' /etc/php.ini
+echo -e "\nDone."
+
+/etc/init.d/httpd restart
+
+echo -e "\nCustomer will need to amend their app/etc/local.xml configuration file to be as follows: "
+echo -e "\n<session_save><![CDATA[memcache]]></session_save>
+<session_save_path><![CDATA[tcp://${DBIP}:11211?persistent=0&weight=2&timeout=10&retry_interval=10]]></session_save_path>
+<!-- Line below seems to cause problems with the Cart updating, commenting out -->
+<!-- <session_cache_limiter><![CDATA[private]]></session_cache_limiter> -->
+<cache>
+  <backend>memcached</backend><!-- apc / memcached / empty=file -->
+  <slow_backend>database</slow_backend>
+  <memcached>
+    <servers>
+      <server>
+        <host><![CDATA[${DBIP}]]></host>
+        <port><![CDATA[11212]]></port>
+        <persistent><![CDATA[1]]></persistent>
+        <weight><![CDATA[2]]></weight>
+        <timeout><![CDATA[10]]></timeout>
+        <retry_interval><![CDATA[10]]></retry_interval>
+        <status><![CDATA[]]></status>
+      </server>
+    </servers>
+    <compression><![CDATA[0]]></compression>
+    <cache_dir><![CDATA[]]></cache_dir>
+    <hashed_directory_level><![CDATA[]]></hashed_directory_level>
+    <hashed_directory_umask><![CDATA[]]></hashed_directory_umask>
+    <file_name_prefix><![CDATA[]]></file_name_prefix>
+  </memcached>
+</cache>"

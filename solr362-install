@@ -1,0 +1,327 @@
+#!/bin/bash
+# Initial script created by James Low
+
+RACKUSER=`id rack 2>&1 >/dev/null`
+if [[ ! -z ${RACKUSER} ]]
+then
+  echo -e "\nrack user does not exist.\nExiting..."
+  exit 1
+fi
+
+if [[ ${EUID} -ne 0 ]]
+then
+  echo -e "Script must be run as root.\nExiting..."
+  exit 1
+fi
+
+RHELCLUSTER=`rpm -q cman | grep -v installed`
+if [[ ! -z ${RHELCLUSTER} ]]
+then
+  echo -e "\nRHCS detected. This script cannot currently handle Solr install as a cluster service."
+  echo -e "Continuing will install Solr locally and will not configure any cluster services."
+  echo -ne "\nContnue [y/N]? "
+  read FORCEINSTALL
+  if [[ ${FORCEINSTALL} != "y" ]]
+  then
+    echo -e "Aborting.\n"
+    exit 1
+  fi
+fi
+
+SOLRDIR_DEFAULT="/opt/solr"
+echo -ne "Specify absolute path for install directory [${SOLRDIR_DEFAULT}]: "
+read SOLRDIR
+if [[ -z ${SOLRDIR} ]]
+then
+  SOLRDIR=${SOLRDIR_DEFAULT}
+fi
+
+echo -ne "Specify Solr admin user [none]: "
+read SOLRADMIN
+if [[ ! -z ${SOLRADMIN} ]]
+then
+  SOLRAUTH=1
+  PASSWORD_AUTO=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1`
+  echo -ne "Specify Solr admin password [${PASSWORD_AUTO}]: "
+  read SOLRPASSWORD
+  if [[ -z ${PASSWORD} ]]
+  then
+    SOLRPASSWORD=${PASSWORD_AUTO}
+  fi
+else
+  SOLRADMIN="admin"
+  SOLRPASSWORD="password"
+  SOLRAUTH=0
+fi
+
+while [[ ${VALID} -ne 1 ]]
+do
+  echo -ne "Specify Solr memory limit in MiB [1024]: "
+  read SOLRMEM
+  if [[ ! -z ${SOLRMEM} ]]
+  then
+    if ! [[ ${SOLRMEM} =~ ^-?[0-9]+$ ]]
+    then
+      echo "Invalid value. Please enter a valid integer. Do not specify units. MiB is used. [1024]"
+    else
+      VALID=1
+    fi
+  else
+    SOLRMEM=1024
+    VALID=1
+  fi
+done
+
+OS=`cat /etc/redhat-release | head -n1`
+if [[ ${OS} == *'Red Hat'* || ${OS} == *'CentOS'* ]]
+then
+  if [[ ${OS} == *'Red Hat'* ]]
+  then
+    INSTALLEDOS=`cat /etc/redhat-release | awk '{print $1,$2}'`
+  else
+    INSTALLEDOS=`cat /etc/redhat-release | awk '{print $1}'`
+  fi
+  MAJOR=`cat /etc/redhat-release | head -n1 | awk '{print $(NF-1)}' | cut -d. -f1`
+  MINOR=`cat /etc/redhat-release | head -n1 | awk '{print $(NF-1)}' | cut -d. -f2`
+  if [[ ${MAJOR} == '6' || ${MAJOR} == '7' ]]
+  then
+    if [[ ${MINOR} -ge '6' || ${MAJOR} == '7' ]]
+    then
+      JAVAINSTALL="8"
+    else
+      JAVAINSTALL="7"
+    fi
+  else
+    echo "Detected Red Hat but version 6 or 7 required. Exiting..."
+    exit 1
+  fi
+else
+  echo "Cannot determine operating system. Exiting..."
+  exit 1
+fi
+echo -ne "\nDetected ${INSTALLEDOS} ${MAJOR}.${MINOR}.\nInstalling Java 1.${JAVAINSTALL}..."
+
+yum -q -y install java-1.${JAVAINSTALL}.0-openjdk
+
+JAVAINSTALLED=`rpm -q java-1.${JAVAINSTALL}.0-openjdk | grep -v installed`
+if [[ -z ${JAVAINSTALLED} ]]
+then
+  echo -e "Cannot find Java RPM. It might not have installed correctly for some reason.\nAborting..."
+  exit 1
+fi
+
+echo -ne " done."
+
+PREPDIR="/home/rack/solrinstall-`date +%Y%m%d`_`/bin/date +%H%M`"
+echo -e "\nCreating prep directory.\nOur working directory will be ${PREPDIR}."
+mkdir $PREPDIR
+
+echo -ne "\nInstalling Apache Solr 3.6.2.\nDownloading..."
+wget -P ${PREPDIR} -q http://archive.apache.org/dist/lucene/solr/3.6.2/apache-solr-3.6.2.tgz
+echo -ne " done.\nExtracting..."
+tar -zxf ${PREPDIR}/apache-solr-3.6.2.tgz -C ${PREPDIR}
+
+echo -ne " done.\nCreating Solr structure in ${SOLRDIR}..."
+mkdir -p ${SOLRDIR}/magento
+/bin/cp -af ${PREPDIR}/apache-solr-3.6.2/example/* ${SOLRDIR}/magento
+/bin/cp -af ${PREPDIR}/apache-solr-3.6.2/contrib ${SOLRDIR}
+/bin/cp -af ${PREPDIR}/apache-solr-3.6.2/dist ${SOLRDIR}
+
+echo -ne " done.\nCreating user..."
+useradd -d ${SOLRDIR}/magento solr
+
+echo -ne " done.\nConfiguring Solr instance..."
+mkdir /var/log/solr
+echo ".level = WARNING" > ${SOLRDIR}/magento/logging.properties
+if [[ ${SOLRAUTH} == 1 ]]
+then
+  sed -i '/<\/Configure>/i \
+    <Set name="UserRealms"> \
+          <Array type="org.mortbay.jetty.security.UserRealm"> \
+            <Item> \
+              <New class="org.mortbay.jetty.security.HashUserRealm"> \
+                <Set name="name">Secure Realm<\/Set> \
+                <Set name="config"><SystemProperty name="jetty.home" default="."\/>\/etc\/realm.properties<\/Set> \
+                <Set name="refreshInterval">0<\/Set> \
+              <\/New> \
+            <\/Item> \
+          <\/Array> \
+    <\/Set>' ${SOLRDIR}/magento/etc/jetty.xml
+
+  sed -i '/<\/web-app>/i \
+  <security-constraint> \
+    <web-resource-collection> \
+      <web-resource-name>Solr authenticated application<\/web-resource-name> \
+      <url-pattern>\/*<\/url-pattern> \
+    <\/web-resource-collection> \
+    <auth-constraint> \
+      <role-name>admin<\/role-name> \
+    <\/auth-constraint> \
+  <\/security-constraint> \
+ \
+  <login-config> \
+    <auth-method>BASIC<\/auth-method> \
+    <realm-name>Secure Realm<\/realm-name> \
+  <\/login-config> \
+ \
+  <security-constraint> \
+    <web-resource-collection> \
+      <web-resource-name>Disable TRACE<\/web-resource-name> \
+      <url-pattern>\/<\/url-pattern> \
+      <http-method>TRACE<\/http-method> \
+    <\/web-resource-collection> \
+    <auth-constraint\/> \
+  <\/security-constraint>' ${SOLRDIR}/magento/etc/webdefault.xml
+
+  echo "${SOLRADMIN}:${SOLRPASSWORD}, admin" > ${SOLRDIR}/magento/etc/realm.properties
+fi
+chown -R solr:solr ${SOLRDIR}
+chown -R solr:solr /var/log/solr
+
+echo -ne " done.\nInstalling init.d script..."
+cat <<EOL > /etc/init.d/solr
+#!/bin/sh
+#Starts, stops, and restarts Apache Solr.
+#chkconfig: 35 92 08
+#description: Starts and stops Apache Solr
+SOLR_DIR="${SOLRDIR}/magento"
+JAVA_OPTIONS="-Xmx${SOLRMEM}m -DSTOP.PORT=8079 -DSTOP.KEY=mykey -Djava.util.logging.config.file=logging.properties -jar start.jar"
+LOG_FILE="/var/log/solr/solr.log"
+JETTY_HOME="${SOLRDIR}"
+JAVA="/usr/bin/java"
+SOLR_USER="solr"
+SOLR_HOST="localhost"
+SOLR_PORT=8983
+ADMIN_USER="${SOLRADMIN}"
+ADMIN_PASSWD="${SOLRPASSWORD}"
+SOLR_PIDFILE=/var/run/solr.pid
+START_TIMEOUT=10
+STOP_TIMEOUT=30
+
+start()
+{
+    started=0
+    wait_time=0
+
+    logger -t solr  "Starting Solr"
+    echo "Starting Solr"
+    solr_port_listen=\$(lsof -n|grep LISTEN|grep \${SOLR_PORT}|awk '{print \$2}'|wc -l)
+    if [[ \${solr_port_listen} -gt 0 ]]; then
+        logger -t solr "Solr port \${SOLR_PORT} is already in use! EXITING"
+        echo "Solr port \${SOLR_PORT} is already in use! EXITING"
+        exit 1
+    fi
+
+    cd \$SOLR_DIR
+    su \$SOLR_USER -c "\$JAVA \$JAVA_OPTIONS 2> \$LOG_FILE &"
+    while [[ \${wait_time} -le \${START_TIMEOUT} ]]; do
+
+        solr_port_listen=\$(lsof -n|grep LISTEN|grep \${SOLR_PORT}|awk '{print \$2}'|wc -l)
+        if [[ \${solr_port_listen} -gt 0 ]]; then
+            started=1
+            break
+        fi
+        sleep 1
+        let wait_time+=1
+    done
+    #get PID
+    solr_pid=\$(lsof -n|grep LISTEN|grep \${SOLR_PORT}|awk '{print \$2}')
+    echo \${solr_pid} > \${SOLR_PIDFILE}
+}
+stop()
+{
+    wait_time=0
+    stopped=0
+    if [[ -f \${SOLR_PIDFILE} ]]; then
+        solr_pid=\$(cat \${SOLR_PIDFILE})
+        rm -f \${SOLR_PIDFILE}
+    else
+        solr_pid=0
+    fi
+
+    logger -t solr "Stopping Solr"
+    echo "Stopping Solr"
+    if [[ -d \${SOLR_DIR} ]]; then
+        cd \$SOLR_DIR
+        \$JAVA \$JAVA_OPTIONS --stop
+    fi;
+    if [[ \${solr_pid} -gt 0 ]]; then
+        while [[ \${wait_time} -le \${STOP_TIMEOUT} ]]; do
+
+            count=\$(ps ax|grep \${solr_pid}|grep -v grep|wc -l)
+            if [[ \${count} -eq 0 ]]; then
+                stopped=1
+                break
+            fi
+
+            sleep 1
+            let wait_time+=1
+        done
+    fi
+
+    if [[ \${stopped} -eq 0 ]] && [[ \${solr_pid} -gt 0 ]]; then
+        kill \${solr_pid}
+    fi
+}
+status()
+{
+    # RHCS needs this
+    CURLOUT=\$(curl -s -u \${ADMIN_USER}:\${ADMIN_PASSWD} http://\${SOLR_HOST}:\${SOLR_PORT}/solr/admin/ping | grep "<str name=\"status\">OK</str>" | awk -F '<str name="status">' '{print \$2}' | cut -d\< -f1)
+    if [[ \${CURLOUT} == "OK" ]]
+    then
+      echo "Solr is running!"
+    elif [[ -z \${CURLOUT} ]]
+    then
+      echo "Failed to get Solr ping"
+      exit 1
+    else
+      echo "Unexpected ping response: \${CURLOUT}"
+      exit 1
+    fi
+}
+case \$1 in
+    start)
+        start
+    ;;
+    stop)
+        stop
+    ;;
+    restart)
+        stop
+        sleep 1
+        start
+    ;;
+    status)
+        status
+    ;;
+    *)
+    echo "Usage: \$0 {start|stop|status|restart}" >&2
+    exit 1
+    ;;
+esac
+exit 0
+EOL
+chmod +x /etc/init.d/solr
+
+echo -ne " done.\n"
+chkconfig solr on
+
+if [[ ${MAJOR} == '7' ]]
+then
+  systemctl start solr.service
+
+  cat <<EOL > /etc/firewalld/services/solr.xml
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+ <short>solr</short>
+ <description>Apache Solr for Magento</description>
+ <port protocol="tcp" port="8983"/>
+</service>
+EOL
+restorecon /etc/firewalld/services/solr.xml
+chmod 640 /etc/firewalld/services/solr.xml  
+echo -e "\nNOTE: firewalld service created as \"solr\". Add to appropriate zone if required.\n(eg. firewall-cmd --permanent --add-service=solr --zone=trusted && firewall-cmd --reload)\n"
+else
+  /etc/init.d/solr start
+fi
+echo -e "\nAll steps complete.\n"

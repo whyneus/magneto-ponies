@@ -1,0 +1,149 @@
+#!/bin/bash
+
+echo -e "Database server"
+
+echo -e "\nChecking repositories..."
+YUM=`yum repolist | grep ius`
+if [[ ! -z "$YUM" ]];
+then
+  echo "IUS Found. Continuing...."
+else
+  echo "Server must be subscribed to IUS repository."
+  exit 1
+fi
+
+MEMORY=`cat /proc/meminfo | grep MemTotal | awk 'OFMT="%.0f" {sum=$2/1024/1024}; END {print sum}'`
+if [[ ${MEMORY} -lt 4 ]]
+then
+  echo -e "\nInstalled memory less than 4GB.\nWe need at least 2GB for memcached on top of MySQL.\nAborting..."
+  exit 1
+fi
+
+if [[ -f /usr/local/psa/version ]]
+then
+  echo -e "\nPlesk `cat /usr/local/psa/version | awk '{print $1}'` detected.\nAborting."
+  exit 1
+fi
+
+PREPDIRCHECK=`ls /home/rack/ | grep magentodbsetup`
+if [[ -z "$PREPDIRCHECK" ]]
+then
+  PREPDIRREUSE="0"
+  PREPDIR="/home/rack/magentodbsetup-`date +%Y%m%d`_`/bin/date +%H%M`"
+  echo -e "\nCreating prep directory.\nOur working directory will be ${PREPDIR}."
+  mkdir $PREPDIR
+else
+  PREPDIRREUSE="1"
+  PREPDIR="/home/rack/${PREPDIRCHECK}"
+  echo -e "\nPrevious prep directory detected.\nReusing ${PREPDIR}."
+fi
+
+if [[ -f /etc/my.cnf ]] && [[ -f ${PREPDIR}/my.cnf.new ]]
+then
+  MY1=`md5sum /etc/my.cnf | awk '{print $1}'`
+  MY2=`md5sum ${PREPDIR}/my.cnf.new | awk '{print $1}'`
+  if [[ "$MY1" != "$MY2" ]]
+  then
+    MYSQLRECONFIG=1
+  fi
+else
+  MYSQLRECONFIG=1
+fi
+
+INNODBLOG=`cat /etc/my.cnf | egrep ^innodb_log_file_size | cut -d= -f2 | tr -d [A-Z][a-z]`
+INNODBBUFFER=`cat /etc/my.cnf | egrep ^innodb_buffer_pool_size | cut -d= -f2 | tr -d [A-Z][a-z]`
+INNODBMAXPACKET=`cat /etc/my.cnf | egrep ^max_allowed_packet | cut -d= -f2 | tr -d [A-Z][a-z]`
+
+if [[ $PREPDIRREUSE == "0" ]] || [[ $MYSQLRECONFIG == "1" ]]
+then
+  echo -e "\nUpdating my.cnf."
+  wget -q -P $PREPDIR 'https://raw.github.com/abg/upgrade-my.cnf/master/rsdba/upgrade_mysql_config.py'
+  cp -a /etc/my.cnf ${PREPDIR}/my.cnf.old
+  /usr/bin/python ${PREPDIR}/upgrade_mysql_config.py -l error --config ${PREPDIR}/my.cnf.old --target 5.5 > ${PREPDIR}/my.cnf.new 2>&1
+  if [[ -z ${INNODBLOG} ]] || [[ ${INNODBLOG} -lt 100 ]]
+  then
+    sed -i 's/^innodb_log_file_size/\#innodb_log_file_size/g' ${PREPDIR}/my.cnf.new
+    sed -i '/^\[mysqld\]/ s:$:\ninnodb_log_file_size=100M:' ${PREPDIR}/my.cnf.new
+  fi
+  if [[ -z ${INNODBBUFFER} ]] || [[ ${INNODBBUFFER} -lt 1024 ]]
+  then
+    sed -i 's/^innodb_buffer_pool_size/\#innodb_buffer_pool_size/g' ${PREPDIR}/my.cnf.new
+    sed -i '/^\[mysqld\]/ s:$:\ninnodb_buffer_pool_size=1024M:' ${PREPDIR}/my.cnf.new
+  fi
+  if [[ -z ${INNODBMAXPACKET} ]] || [[ ${INNODBMAXPACKET} -lt 32 ]]
+  then
+    sed -i 's/^max_allowed_packet/\#max_allowed_packet/g' ${PREPDIR}/my.cnf.new
+    sed -i '/^\[mysqld\]/ s:$:\nmax_allowed_packet=32M:' ${PREPDIR}/my.cnf.new
+  fi
+  cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
+  echo -e "\nDone."
+else
+  echo -e "\nmy.cnf already updated.\nContinuing..."
+fi
+
+MYSQLVERSION=`mysqladmin version | grep Server | awk '{print $3}'`
+MYSQLRPM=`rpm -qa | grep mysql55-server`
+if [[ -z $MYSQLRPM ]]
+then
+  echo -e "\nUpdating MySQL ${MYSQLVERSION} to latest 5.5."
+  yum -q -y install yum-plugin-replace
+  yum -q -y replace mysql-server --replace-with mysql55-server
+  rm -f /var/lib/mysql/ib_logfile*
+  /etc/init.d/mysqld start
+  /usr/bin/mysql_upgrade
+  /etc/init.d/mysqld restart
+  chkconfig mysqld on
+  echo -e "\nDone."
+else
+  echo -e "\n${MYSQLRPM} appears to already be installed.\nContinuing..."
+fi
+
+MEMCACHEDRPM=`rpm -qa | grep memcached`
+if [[ -z $MEMCACHEDRPM ]]
+then
+  echo -e "\nInstalling memcached..."
+  yum -q -y install memcached
+  echo -e "\nDone."
+else
+  echo -e "\n${MEMCACHEDRPM} appears to already be installed.\nContinuing..."
+fi
+
+MEMCACHECONF=`ls -1 /etc/init.d/ | egrep -c -e 'memcached-sessions|memcached-objects'`
+if [[ "${MEMCACHECONF}" -lt 2 ]]
+then
+  echo -e "\nConfiguring memcached instances..."
+  cp -f /etc/init.d/memcached /etc/init.d/memcached-sessions
+  cp -f /etc/init.d/memcached /etc/init.d/memcached-objects
+  chkconfig memcached off
+  /etc/init.d/memcached stop
+
+  sed -i 's:/etc/sysconfig/memcached:/etc/sysconfig/memcached-sessions:g' /etc/init.d/memcached-sessions
+  echo "PORT=\"11211\"
+USER=\"memcached\"
+MAXCONN=\"1024\"
+CACHESIZE=\"500\"
+OPTIONS=\"\"
+PIDFILE=/var/run/memcached/memcached-sessions.pid
+LOCKFILE=/var/lock/subsys/memcached-sessions" > /etc/sysconfig/memcached-sessions
+
+  sed -i 's:/etc/sysconfig/memcached:/etc/sysconfig/memcached-objects:g' /etc/init.d/memcached-objects
+  echo "PORT=\"11212\"
+USER=\"memcached\"
+MAXCONN=\"1024\"
+CACHESIZE=\"1500\"
+OPTIONS=\"\"
+PIDFILE=/var/run/memcached/memcached-objects.pid
+LOCKFILE=/var/lock/subsys/memcached-objects" > /etc/sysconfig/memcached-objects
+
+  sed -i 's/PORT="11211"/PORT="11210"/' /etc/sysconfig/memcached
+
+  chkconfig memcached-sessions on
+  chkconfig memcached-objects on
+  service memcached-sessions start
+  service memcached-objects start
+else
+  echo -e "\nInstances appear to be configured.\nContinuing..."
+fi
+
+IP=`ifconfig eth0 | grep inet\ addr | awk '{print $2}' | cut -d: -f2`
+echo -e "\nAll steps completed.\nConnect to MySQL and Memcached instances using IP ${IP}."
