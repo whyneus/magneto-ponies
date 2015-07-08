@@ -766,9 +766,11 @@ for service in php-fpm httpd redis memcached mysql; do
    service $service restart
 done
 
-## iptables
-iptables -I INPUT -p tcp --dport 80 -j ACCEPT
-service iptables save
+## iptables for Cloud servers
+if [[ $ENVIRONMENT == "CLOUD" ]]; then
+    iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+    service iptables save
+fi
 
 
 
