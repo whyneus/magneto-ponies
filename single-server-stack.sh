@@ -165,7 +165,9 @@ fi
 
 echo -e "Proceeding with install...\n\n"
 
-
+## First, some packages we might want/need. 
+yum -y -q install git vim telnet nc mlocate memcached
+yum remove dovecot >dev/null 2>&1
 
 # REMOVE any existing PHP packages
 CURRENTPHP=$(rpm -qa | grep ^php)
@@ -430,7 +432,7 @@ fi
 echo "Installing Redis from IUS..."
 yum -q -y install redis30u
 
-echo "Configuring redis.conf"
+echo "Configuring Redis..."
 
 cp -rp /etc/redis.conf /etc/redis.conf.original
 
@@ -458,6 +460,21 @@ sysctl -p >/dev/null 2>&1
 
 echo "redis soft nofile 16384" >> /etc/security/limits.conf
 echo "redis hard nofile 16384" >> /etc/security/limits.conf
+
+# Cleanup script 
+HOMEDIR=$(getent passwd $FTPUSER | cut -d':' -f6)
+cd $HOMEDIR
+git clone https://github.com/samm-git/cm_redis_tools.git
+cd cm_redis_tools
+git submodule update --init --recursive
+
+# Create the cron job, and the general Magento Cron while we're here
+echo "33 2 * * * /usr/bin/php $HOMEDIR/cm_redis_tools/rediscli.php -s 127.0.0.1 -p 6379 -d 0,1,2
+*/5 * * * * /bin/bash $HOMEDIR/httpdocs/cron.sh" >> /tmp/rediscron
+crontab -l -u $CRONUSER | cat - /tmp/rediscron | crontab -u $CRONUSER -
+
+
+
 
 
 if [[ $DBSERVER == 1 ]]; then
@@ -751,12 +768,6 @@ fi
 
 
 
-
-
-
-
-## Extra useful packages
-yum -y -q install git vim telnet nc mlocate memcached
 
 
 
