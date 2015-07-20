@@ -285,6 +285,7 @@ then
 else
   echo -e "\nModule already appears to be installed.\nContinuing..."
 fi
+echo "# mod_fastcgi in use for PHP-FPM. This file here to prevent 'php' package creating new config." > /etc/httpd/conf.d/php.conf
 
 
 
@@ -308,6 +309,7 @@ echo -e "\nConfiguring PHP-FPM..."
 if [[ ! -f /etc/php-fpm.d/${DOMAINNAME}.conf ]]
 then
   mv /etc/php-fpm.d/www.conf /etc/php-fpm.d/www.conf.bak
+  echo "# Default 'www' pool disabled" > /etc/php-fpm.d/www.conf 
   echo "[${DOMAINNAME}]
 listen = /var/run/php-fpm/${DOMAINNAME}.sock
 listen.owner = ${FTPUSER}
