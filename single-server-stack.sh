@@ -12,7 +12,7 @@ if [ "$EUID" -ne 0 ]
   exit 1
 fi
 
-MAJORVERS=$(cat /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
+MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
 if [ "$MAJORVERS"  != 6 ]; then
    echo "This script is for CentOS 6 / RHEL 6  only."
    exit 1
