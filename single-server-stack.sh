@@ -87,11 +87,14 @@ echo -e "\n\nWhich PHP version should be installed?
 NB: Check compatibility of your Magento version."
 
 while true; do
-  echo "Valid options: 5.4 , 5.5 . 
+  echo "Valid options:
+   5.3 - for legacy versions only. 
+   5.4 - for Magneto CE 1.6.x / EE 1.11.x  and newer (with patch)
+   5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer  
 "
   read PHPVERS
 
-  if [[ $PHPVERS == "5.4" ]] || [[ $PHPVERS == "5.5" ]]
+  if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]
   then
     break
   fi
@@ -185,6 +188,13 @@ if [ -e /etc/php.ini ] || [ -e /etc/php.d ]; then
     mv /etc/php* $OLDCONFIG
 fi
 
+if [[ $PHPVERS == "5.3" ]]; then
+     echo "Installing PHP 5.3 (with APC)..."
+     yum -q -y install php-fpm php-gd php-mysql php-mcrypt php-xml php-xmlrpc php-mbstring php-soap php-pecl-memcache php-pecl-redis php-pecl-apc
+
+     # PHP 5.3 specific tweaks
+     sed -ri 's/^;?apc.shm_size.*/apc.shm_size=256M/g' /etc/php.d/apc.ini
+fi
 
 if [[ $PHPVERS == "5.4" ]]; then
      echo "Installing PHP 5.4..."
