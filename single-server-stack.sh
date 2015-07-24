@@ -169,7 +169,7 @@ fi
 echo -e "Proceeding with install...\n\n"
 
 ## First, some packages we might want/need. 
-yum -y -q install git vim telnet nc mlocate memcached
+yum -y -q install git vim jwhois telnet nc mlocate memcached
 yum remove dovecot >/dev/null 2>&1
 
 # REMOVE any existing PHP packages
