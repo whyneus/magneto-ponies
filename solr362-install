@@ -205,7 +205,7 @@ start()
 
     logger -t solr  "Starting Solr"
     echo "Starting Solr"
-    solr_port_listen=\$(lsof -n|grep LISTEN|grep \${SOLR_PORT}|awk '{print \$2}'|wc -l)
+    solr_port_listen=\$(lsof -n|grep LISTEN|grep '\\ \${SOLR_PORT}\\ '|awk '{print \$2}'|wc -l)
     if [[ \${solr_port_listen} -gt 0 ]]; then
         logger -t solr "Solr port \${SOLR_PORT} is already in use! EXITING"
         echo "Solr port \${SOLR_PORT} is already in use! EXITING"
@@ -216,7 +216,7 @@ start()
     su \$SOLR_USER -c "\$JAVA \$JAVA_OPTIONS 2> \$LOG_FILE &"
     while [[ \${wait_time} -le \${START_TIMEOUT} ]]; do
 
-        solr_port_listen=\$(lsof -n|grep LISTEN|grep \${SOLR_PORT}|awk '{print \$2}'|wc -l)
+        solr_port_listen=\$(lsof -n|grep LISTEN|grep '\\ \${SOLR_PORT}\\ '|awk '{print \$2}'|wc -l)
         if [[ \${solr_port_listen} -gt 0 ]]; then
             started=1
             break
