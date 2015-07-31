@@ -83,7 +83,7 @@ then
   TIMEZONE="UTC"
 fi
 sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
-sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=20000/g' /etc/php.d/*opcache.ini
+sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
 sed -i 's/^safe_mode =.*/safe_mode = Off/g' /etc/php.ini
 sed -ri "s~^;?date.timezone =.*~date.timezone = ${TIMEZONE}~g" /etc/php.ini
 sed -i 's/^; *realpath_cache_size.*/realpath_cache_size = 128K/g' /etc/php.ini
