@@ -1,0 +1,279 @@
+#!/bin/bash
+
+echo -e "Webserver - Apache with PHP FPM"
+
+RACKUSER=`id rack 2>&1 >/dev/null`
+if [[ ! -z ${RACKUSER} ]]
+then
+  echo -e "\nrack user does not exist!\nAborting."
+  exit 1
+fi
+
+#echo -ne "\nEnter DB server IP [X.X.X.X]: "
+#read DBIP
+#if [[ -z ${DBIP} ]]
+#then
+#  DBIP="X.X.X.X"
+#fi
+
+echo -ne "\nDomain name: "
+read DOMAINNAME
+if [[ -z ${DOMAINNAME} ]]
+then
+  echo -e "\nWe need a site to configure PHP-FPM on.\nExiting."
+  exit 1
+fi
+
+echo -ne "\nSite FTP user: "
+read FTPUSER
+if [[ -z ${FTPUSER} ]]
+then
+  echo -e "\nWe need a user to assign to this site.\nExiting."
+  exit 1
+fi
+
+if [[ -f /usr/local/psa/version ]]
+then
+  echo -e "\nPlesk `cat /usr/local/psa/version | awk '{print $1}'` detected.\nThis script does not take Plesk configurations into account.\nAborting."
+  exit 1
+fi
+
+echo -e "\nChecking repositories..."
+YUM=`yum repolist | grep ius`
+if [[ ! -z "$YUM" ]];
+then
+  echo "IUS Found. Continuing...."
+else
+  echo "Server must be subscribed to IUS repository."
+  exit 1
+fi
+
+MYSQLAVAILABLE=`rpm -qa | grep -e "mysql.*server.*"`
+#echo -e "\nShutting down MySQL..."
+#if [[ ! -z ${MYSQLAVAILABLE} ]]
+#then
+#  /etc/init.d/mysqld stop
+#  chkconfig mysqld off
+#  echo -e "\nDone."
+#else
+#  echo "mysql-server does not appear to be installed.\nContinuing..."
+#fi
+
+PHPAVAILABLE=`rpm -qa | grep php55`
+echo -e "\nUpdating PHP to 5.5..."
+if [[ -z ${PHPAVAILABLE} ]]
+then
+  yum -q -y install yum-plugin-replace
+  yum -q -y replace php --replace-with php55u
+  yum -q -y install php55u-gd php55u-mysql php55u-mcrypt php55u-xml php55u-xmlrpc php55u-mbstring php55u-soap php55u-pecl-memcache php55u-pecl-redis php55u-pecl-zendopcache php55u-fpm
+  echo -e "\nDone."
+else
+  PHPADDITIONAL=`rpm -qa | egrep -c 'php55u-gd|php55u-mysql|php55u-mcrypt|php55u-xml|php55u-xmlrpc|php55u-mbstring|php55u-soap|php55u-pecl-memcache|php55u-pecl-redis|php55u-pecl-apc|php55u-fpm'`
+  if [[ ${PHPADDITIONAL} -lt 6 ]]
+  then
+    yum -q -y install php55u-gd php55u-mysql php55u-mcrypt php55u-xml php55u-xmlrpc php55u-mbstring php55u-soap php55u-pecl-memcache php55u-pecl-redis php55u-pecl-apc php55u-fpm
+  fi
+  echo -e "\nphp54 already appears to be installed.\nContinuing..."
+fi
+
+TIMEZONE=`cat /etc/sysconfig/clock | grep ZONE | cut -d\" -f2`
+echo -e "\nConfiguring PHP."
+if [[ -z ${TIMEZONE} ]]
+then
+  TIMEZONE="UTC"
+fi
+sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
+sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=20000/g' /etc/php.d/*opcache.ini
+sed -i 's/^safe_mode =.*/safe_mode = Off/g' /etc/php.ini
+sed -ri "s~^;?date.timezone =.*~date.timezone = ${TIMEZONE}~g" /etc/php.ini
+sed -i 's/^; *realpath_cache_size.*/realpath_cache_size = 128K/g' /etc/php.ini
+sed -i 's/^; *realpath_cache_ttl.*/realpath_cache_ttl = 7200/g' /etc/php.ini
+sed -i 's/^memory_limit.*/memory_limit = 512M/g' /etc/php.ini
+sed -i 's/^max_execution_time.*/max_execution_time = 1800/g' /etc/php.ini
+echo -e "\nDone."
+
+HTTPDDEVEL=`rpm -qa | grep -e "httpd.*devel.*"`
+echo -e "\nIntalling mod_fastcgi..."
+if [[ -z ${HTTPDDEVEL} ]]
+then
+  yum -q -y install httpd-devel httpd mod_ssl
+fi
+
+PREPDIRCHECK=`ls /home/rack/ | grep magentowebsetup`
+if [[ -z "$PREPDIRCHECK" ]]
+then
+  PREPDIRREUSE="0"
+  PREPDIR="/home/rack/magentowebsetup-`date +%Y%m%d`_`/bin/date +%H%M`"
+  echo -e "\nCreating prep directory.\nOur working directory will be ${PREPDIR}."
+  mkdir $PREPDIR
+else
+  PREPDIRREUSE="1"
+  PREPDIR="/home/rack/${PREPDIRCHECK}"
+  echo -e "\nPrevious prep directory detected.\nReusing ${PREPDIR}."
+fi
+
+MODFCGI=`ls -1 /usr/lib64/httpd/modules/ | grep fastcgi`
+GCCINSTALLED=`command -v gcc`
+MAKEINSTALLED=`command -v make`
+echo -e "\nInstalling mod_fastcgi..."
+if [[ ${PREPDIRREUSE}="1" ]]
+then
+  wget -q -P ${PREPDIR} 'http://www.fastcgi.com/dist/mod_fastcgi-SNAP-0910052141.tar.gz'
+  tar -zxC ${PREPDIR} -f ${PREPDIR}/mod_fastcgi-SNAP-0910052141.tar.gz
+fi
+if [[ -z ${MODFCGI} ]]
+then
+  if [[ -z ${MAKEINSTALLED} ]] || [[ -z ${GCCINSTALLED} ]]
+  then
+    yum -q -y install make gcc
+  fi
+  cd ${PREPDIR}/mod_fastcgi-*
+  make -f Makefile.AP2 top_dir=/usr/lib64/httpd
+  cp .libs/mod_fastcgi.so /usr/lib64/httpd/modules/
+  echo "LoadModule fastcgi_module /usr/lib64/httpd/modules/mod_fastcgi.so" > /etc/httpd/conf.d/fastcgi.conf
+else
+  echo -e "\nModule already appears to be installed.\nContinuing..."
+fi
+
+PASSWORD=`cat /dev/urandom | tr -dc 'a-zA-Z0-9-_!@#$%^&*()_+{}|:<>?=' | fold -w 24 | head -n 1 | grep -i '[!@#$%^&*()_+{}|:<>?=]'`
+USEREXIST=`id ${FTPUSER} 2>&1 >/dev/null`
+echo -e "\nCreating user ${FTPUSER}..."
+if [[ -z ${USEREXIST} ]]
+then
+  echo -e "\nUser already exists.\nCheck that it has permissions to access to /var/www/vhosts/${DOMAINNAME}.\nContinuing..."
+else
+  mkdir -p /var/www/vhosts
+  useradd -d /var/www/vhosts/${DOMAINNAME} ${FTPUSER}
+  echo ${PASSWORD} | passwd --stdin ${FTPUSER}
+  chmod o+x /var/www/vhosts/${DOMAINNAME}
+  mkdir /var/www/vhosts/${DOMAINNAME}/httpdocs
+  chown ${FTPUSER}:${FTPUSER} /var/www/vhosts/${DOMAINNAME}/httpdocs
+  NEWUSER=1
+fi
+
+echo -e "\nConfiguring PHP-FPM..."
+if [[ ! -f /etc/php-fpm.d/${DOMAINNAME}.conf ]]
+then
+  mv /etc/php-fpm.d/www.conf /etc/php-fpm.d/www.conf.bak
+  echo "[${DOMAINNAME}]
+listen = /var/run/php-fpm/${DOMAINNAME}.sock
+listen.owner = ${FTPUSER}
+listen.group = apache
+listen.mode = 0660
+user = ${FTPUSER}
+group = apache
+pm = dynamic
+pm.max_children = 100
+pm.start_servers = 30
+pm.min_spare_servers = 30
+pm.max_spare_servers = 100
+pm.max_requests = 500
+php_admin_value[error_log] = /var/log/php-fpm/${DOMAINNAME}-error.log
+php_admin_flag[log_errors] = on" > /etc/php-fpm.d/${DOMAINNAME}.conf
+  if [[ ! -f /var/run/php-fpm/php-fpm.pid ]]
+  then
+    /etc/init.d/php-fpm start
+  else
+    /etc/init.d/php-fpm reload
+  fi
+  echo -e "\nDone."
+else
+  echo -e "Configuration appears to already exist.\nContinuing..."
+fi
+
+HOSTNAME=`hostname`
+VHOSTEXISTS=`httpd -S 2>&1 | grep -v ${HOSTNAME} | grep ${DOMAINNAME}`
+if [[ -z ${VHOSTEXISTS} ]]
+then
+  NAMEDBASEDEXISTS=`grep -e ^NameVirt -R /etc/httpd/`
+  INCLUDEEXISTS=`grep -e ^Include.*vhosts\.d.*conf -R /etc/httpd/`
+  if [[ -z ${NAMEDBASEDEXISTS} ]]
+  then
+    echo -e "\nNameVirtualHost *:80" >> /etc/httpd/conf/httpd.conf
+  fi
+  if [[ -z ${INCLUDEEXISTS} ]]
+  then
+    echo -e "\nInclude vhosts.d/*.conf" >> /etc/httpd/conf/httpd.conf
+  fi
+fi
+
+if [[ -z ${VHOSTEXISTS} ]] && [[ "${DOMAINNAME}" != www.* ]]
+then
+  mkdir -p /etc/httpd/vhosts.d
+  echo "<VirtualHost *:80>
+  ServerName ${DOMAINNAME}
+  ServerAlias www.${DOMAINNAME}
+  DocumentRoot /var/www/vhosts/${DOMAINNAME}/httpdocs
+  SetEnvIf X-Forwarded-Proto https HTTPS=on
+
+  <Directory /var/www/vhosts/${DOMAINNAME}/httpdocs>
+    AllowOverride All
+    Options +FollowSymLinks
+    SetOutputFilter DEFLATE
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+    SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
+    Header append Vary User-Agent env=!dont-vary
+    ExpiresActive On
+    ExpiresDefault \"access plus 1 month\"
+  </Directory>
+
+  CustomLog /var/log/httpd/${DOMAINNAME}-access_log combined
+  ErrorLog /var/log/httpd/${DOMAINNAME}-error_log
+
+  <IfModule mod_fastcgi.c>
+    AddHandler php5-fcgi .php
+    Action php5-fcgi /php5-fcgi
+    Alias /php5-fcgi /dev/shm/${DOMAINNAME}.fcgi
+    FastCGIExternalServer /dev/shm/${DOMAINNAME}.fcgi -socket /var/run/php-fpm/${DOMAINNAME}.sock -flush -idle-timeout 1800
+  </IfModule>
+</VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
+elif [[ -z ${VHOSTEXISTS} ]] && [[ "${DOMAINNAME}" == www.* ]]
+then
+  mkdir -p /etc/httpd/vhosts.d
+  echo "<VirtualHost *:80>
+  ServerName `echo ${DOMAINNAME} | sed 's/^www\.//g'`
+  ServerAlias ${DOMAINNAME}
+  DocumentRoot /var/www/vhosts/`echo ${DOMAINNAME} | sed 's/^www\.//g'`/httpdocs
+  SetEnvIf X-Forwarded-Proto https HTTPS=on
+
+  <Directory /var/www/vhosts/`echo ${DOMAINNAME} | sed 's/^www\.//g'`/httpdocs>
+    AllowOverride All
+    Options +FollowSymLinks
+    SetOutputFilter DEFLATE
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+    SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
+    Header append Vary User-Agent env=!dont-vary
+    ExpiresActive On
+    ExpiresDefault \"access plus 1 month\"
+  </Directory>
+
+  CustomLog /var/log/httpd/`echo ${DOMAINNAME} | sed 's/^www\.//g'`-access_log combined
+  ErrorLog /var/log/httpd/`echo ${DOMAINNAME} | sed 's/^www\.//g'`-error_log
+
+  <IfModule mod_fastcgi.c>
+    AddHandler php5-fcgi .php
+    Action php5-fcgi /php5-fcgi
+    Alias /php5-fcgi /dev/shm/`echo ${DOMAINNAME} | sed 's/^www\.//g'`.fcgi
+    FastCGIExternalServer /dev/shm/`echo ${DOMAINNAME} | sed 's/^www\.//g'`.fcgi -socket /var/run/php-fpm/`echo ${DOMAINNAME} | sed 's/^www\.//g'`.sock -flush -idle-timeout 1800
+  </IfModule>
+</VirtualHost>" > /etc/httpd/vhosts.d/`echo ${DOMAINNAME} | sed 's/^www\.//g'`.conf
+else
+  echo -e "Virtual host for ${DOMAINNAME} appears to exist.\nNot replacing.\nContinuing..."
+fi
+
+/etc/init.d/httpd restart
+chkconfig httpd on
+chkconfig php-fpm on
+
+if [[ ${NEWUSER} -eq 1 ]]
+then
+  echo -e "\nLogin credentials:\nDomain: ${DOMAINNAME}\nHome directory: /var/www/vhosts/${DOMAINNAME}\nUsername: ${FTPUSER}\nPassword: ${PASSWORD}"
+fi
+if [[ ! -z ${VHOSTEXISTS} ]]
+then
+  echo -e "\nPlease check Apache virtual host configuration as domain appeared to already exist and was not created."
+fi
