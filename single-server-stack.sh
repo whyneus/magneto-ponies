@@ -202,7 +202,7 @@ if [[ $PHPVERS == "5.4" ]]; then
 
     # PHP 5.4 specific tweaks
     sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/opcache.ini
-    sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=20000/g' /etc/php.d/opcache.ini
+    sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/opcache.ini
 fi 
 
 if [[ $PHPVERS == "5.5" ]]; then
@@ -210,7 +210,7 @@ if [[ $PHPVERS == "5.5" ]]; then
     yum -q -y install php55u-gd php55u-mysql php55u-mcrypt php55u-xml php55u-xmlrpc php55u-mbstring php55u-soap php55u-pecl-memcache php55u-pecl-redis php55u-pecl-zendopcache php55u-fpm
    # PHP 5.5 specific tweaks
    sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
-   sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=20000/g' /etc/php.d/*opcache.ini
+   sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
     
 fi
 
