@@ -324,7 +324,8 @@ pm.min_spare_servers = 30
 pm.max_spare_servers = 100
 pm.max_requests = 500
 php_admin_value[error_log] = /var/log/php-fpm/${DOMAINNAME}-error.log
-php_admin_flag[log_errors] = on" > /etc/php-fpm.d/${DOMAINNAME}.conf
+php_admin_flag[log_errors] = on
+php_admin_flag[zlib.output_compression] = On" > /etc/php-fpm.d/${DOMAINNAME}.conf
   if [[ ! -f /var/run/php-fpm/php-fpm.pid ]]
   then
     /etc/init.d/php-fpm start
