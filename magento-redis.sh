@@ -33,7 +33,7 @@ sed -i 's/^save 300 10/# save 300 10/g' /etc/redis.conf
 sed -i 's/^save 60 10000/# save 60 10000/g' /etc/redis.conf
 
 sed -i '/^\# maxmemory <bytes>/a maxmemory 1GB' /etc/redis.conf
-sed -i '/^\# maxmemory-policy volatile-lru/a maxmemory-policy allkeys-lru' /etc/redis.conf
+sed -i '/^\# maxmemory-policy noeviction/a maxmemory-policy allkeys-lru' /etc/redis.conf
 
 
 # System / kernel config
