@@ -436,19 +436,6 @@ crontab -l -u $FTPUSER | cat - /tmp/rediscron | crontab -u $FTPUSER -
 
 
 
-
-
-# END if DBSERVER=1
-fi
-
-
-
-
-
-
-
-
-
 ## Service config
 for service in php-fpm httpd; do
    chkconfig $service on
