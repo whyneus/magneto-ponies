@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo -ne "Redis host: "
+read HOST
+
+echo -ne "Redis password: "
+read AUTH
+
+echo -ne "Redis port: "
+read PORT
+
+echo -ne "\nDatabases currently used: "
+for i in `(echo -e "auth ${AUTH} \n INFO"; sleep 1) | nc ${HOST} ${PORT} | egrep -i ^db.?\: | cut -d: -f1 | sed 's/^..//'`; do echo -ne "$i "; done
+echo -ne "\nScan which database: "
+read DATABASE
+
+(echo -e "auth ${AUTH} \n SELECT ${DATABASE} \n KEYS *"; sleep 1) | nc ${HOST} ${PORT} | egrep -v ^\\$ | tail -n+4 > /tmp/zztempredis
+sed 's/^/DEBUG OBJECT /g' -i /tmp/zztempredis
+
+(echo -ne "auth ${AUTH} \nSELECT ${DATABASE} \n`cat /tmp/zztempredis`"; sleep 1) | nc ${HOST} ${PORT} | tail -n+3 | grep -v \\-ERR | cut -d: -f5 | awk '{sum+=$1/1024/1024} END {print sum}'
+echo -ne " MiB"
+rm -f /tmp/zztempredis
