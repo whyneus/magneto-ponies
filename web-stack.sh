@@ -38,8 +38,8 @@ if [[ ! -z "$YUM" ]];
 then
   echo " - EPEL found."
 else
-  echo " - installing epel-release..."
-  yum -q -y install epel-release
+  echo " - installing rs-epel-release..."
+  yum -q -y install rs-epel-release
 fi
 
 YUM=`yum repolist | grep -i epel`
