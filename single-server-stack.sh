@@ -110,8 +110,8 @@ then
 fi
 
 echo -ne "\nUsername to create (for SSH/SFTP and FPM owner): "
-read FTPUSER
-if [[ -z ${FTPUSER} ]]
+read USERNAME
+if [[ -z ${USERNAME} ]]
 then
   echo -e "\nWe need a user to assign to this site.\nExiting."
   exit 1
@@ -135,7 +135,7 @@ fi
 echo -e "\n\n\n\n-------------------------\n\nSANITY CHECK:
 
   Domain     : $DOMAINNAME
-  User       : $FTPUSER
+  User       : $USERNAME
   PHP version: $PHPVERS
 
 NB: if PHP is already installed, this script will remove all config and replace with $PHPVERS optimised for Magento.)
@@ -146,7 +146,7 @@ if [[ $DBSERVER == 1 ]]; then
   Database   : Install and configure Percona 5.6"
   if [[ ! -z ${DBNAME} ]]; then
     echo "  DB Name    : $DBNAME"
-    echo "  DB User    : $FTPUSER"
+    echo "  DB User    : $USERNAME"
   else
     echo "               but do not create a database"
   fi
@@ -290,18 +290,18 @@ echo "# mod_fastcgi in use for PHP-FPM. This file here to prevent 'php' package 
 
 
 USERPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n1)
-USEREXIST=`id ${FTPUSER} 2>&1 >/dev/null`
-echo -e "\nCreating user ${FTPUSER}..."
+USEREXIST=`id ${USERNAME} 2>&1 >/dev/null`
+echo -e "\nCreating user ${USERNAME}..."
 if [[ -z ${USEREXIST} ]]
 then
   echo -e "\nUser already exists.\nCheck that it has permissions to access to /var/www/vhosts/${DOMAINNAME}.\nContinuing..."
 else
   mkdir -p /var/www/vhosts
-  useradd -d /var/www/vhosts/${DOMAINNAME} ${FTPUSER}
-  echo ${USERPASS} | passwd --stdin ${FTPUSER}
+  useradd -d /var/www/vhosts/${DOMAINNAME} ${USERNAME}
+  echo ${USERPASS} | passwd --stdin ${USERNAME}
   chmod o+x /var/www/vhosts/${DOMAINNAME}
   mkdir /var/www/vhosts/${DOMAINNAME}/httpdocs
-  chown ${FTPUSER}:${FTPUSER} /var/www/vhosts/${DOMAINNAME}/httpdocs
+  chown ${USERNAME}:${USERNAME} /var/www/vhosts/${DOMAINNAME}/httpdocs
   NEWUSER=1
 fi
 
@@ -312,10 +312,10 @@ then
   echo "# Default 'www' pool disabled" > /etc/php-fpm.d/www.conf 
   echo "[${DOMAINNAME}]
 listen = /var/run/php-fpm/${DOMAINNAME}.sock
-listen.owner = ${FTPUSER}
+listen.owner = ${USERNAME}
 listen.group = apache
 listen.mode = 0660
-user = ${FTPUSER}
+user = ${USERNAME}
 group = apache
 pm = dynamic
 pm.max_children = 100
@@ -475,7 +475,7 @@ echo "redis soft nofile 16384" >> /etc/security/limits.conf
 echo "redis hard nofile 16384" >> /etc/security/limits.conf
 
 # Cleanup script 
-HOMEDIR=$(getent passwd $FTPUSER | cut -d':' -f6)
+HOMEDIR=$(getent passwd $USERNAME | cut -d':' -f6)
 cd $HOMEDIR
 git clone https://github.com/samm-git/cm_redis_tools.git
 cd cm_redis_tools
@@ -487,7 +487,7 @@ echo "## Redis cleanup job
 
 ## Main Magento cron job
 */5 * * * * /bin/bash $HOMEDIR/httpdocs/cron.sh" >> /tmp/rediscron
-crontab -l -u $FTPUSER | cat - /tmp/rediscron | crontab -u $FTPUSER -
+crontab -l -u $USERNAME | cat - /tmp/rediscron | crontab -u $USERNAME -
 
 
 
@@ -706,7 +706,7 @@ then
   MYSQLUSERPASS=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n1`
   echo -ne "Creating database and user..."
   mysql -uroot -e "CREATE DATABASE \`${DBNAME}\`"
-  mysql -uroot -e "GRANT ALL PRIVILEGES ON \`${DBNAME}\`.* to \`${FTPUSER}\`@'localhost' IDENTIFIED BY '${MYSQLUSERPASS}'"
+  mysql -uroot -e "GRANT ALL PRIVILEGES ON \`${DBNAME}\`.* to \`${USERNAME}\`@'localhost' IDENTIFIED BY '${MYSQLUSERPASS}'"
 fi
 
 
@@ -808,7 +808,7 @@ echo "
 Setup complete. 
 
 This server IP: $(curl -4 icanhazip.com --max-time 3)
-SSH Username  : $FTPUSER
+SSH Username  : $USERNAME
 SSH Password  : $USERPASS
 Home Directory: /var/www/vhosts/$DOMAINNAME/
 Web doc root  : /var/www/vhosts/$DOMAINNAME/httpdocs/
@@ -817,7 +817,7 @@ Web doc root  : /var/www/vhosts/$DOMAINNAME/httpdocs/
 if [[ ! -z ${DBNAME} ]]; then
 echo "
 Credentials for Magento local.xml:
-MySQL Username: $FTPUSER (@localhost)
+MySQL Username: $USERNAME (@localhost)
 MySQL Password: $MYSQLUSERPASS
 MySQL DB name : $DBNAME
 "
