@@ -115,15 +115,22 @@ if [[ -z ${DOMAINNAME} ]]; then
 fi 
 
 # Ask for username if we don't already have it
-if [[ -z ${FTPUSER} ]]; then
+if [[ -z ${USERNAME} ]]; then
   echo -ne "\nUsername to create (for SSH/SFTP and FPM owner): "
-  read FTPUSER
-  if [[ -z ${FTPUSER} ]]
+  read USERNAME
+  if [[ -z ${USERNAME} ]]
   then 
     echo -e "\nWe need a user to assign to this site.\nExiting."
     exit 1
   fi
 fi
+
+# Add user if if doesn't exist already
+GETENT=$(getent passwd $USERNAME)
+if [[ -z ${GETENT} ]]; then
+   useradd $USERNAME
+fi
+
 
 
 # REMOVE any existing PHP packages
@@ -196,10 +203,10 @@ then
   echo "# Default 'www' pool disabled" > /etc/php-fpm.d/www.conf 
   echo "[${DOMAINNAME}]
 listen = /var/run/php-fpm/${DOMAINNAME}.sock
-listen.owner = ${FTPUSER}
+listen.owner = ${USERNAME}
 listen.group = apache
 listen.mode = 0660
-user = ${FTPUSER}
+user = ${USERNAME}
 group = apache
 pm = dynamic
 pm.max_children = 100
@@ -214,10 +221,10 @@ php_admin_flag[zlib.output_compression] = On" > /etc/php-fpm.d/${DOMAINNAME}.con
 # Separate pool for Magento admin; allows better resource control. 
 echo "[${DOMAINNAME}-admin]
 listen = /var/run/php-fpm/${DOMAINNAME}-admin.sock
-listen.owner = ${FTPUSER}
+listen.owner = ${USERNAME}
 listen.group = apache
 listen.mode = 0660
-user = ${FTPUSER}
+user = ${USERNAME}
 group = apache
 pm = dynamic
 pm.max_children = 20
