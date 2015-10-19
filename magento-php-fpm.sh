@@ -81,6 +81,8 @@ then
   exit 1
 fi
 
+# Ask for PHP version if not already set
+if [[ -z "$PHPVERS" ]]; then
 
 
 echo -e "\n\nWhich PHP version should be installed?
@@ -99,6 +101,8 @@ while true; do
     break
   fi
 done
+
+fi 
 
 
 
