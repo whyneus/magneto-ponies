@@ -172,69 +172,6 @@ echo -e "Proceeding with install...\n\n"
 yum -y -q install git vim jwhois telnet nc mlocate memcached
 yum remove dovecot >/dev/null 2>&1
 
-# REMOVE any existing PHP packages
-CURRENTPHP=$(rpm -qa | grep ^php)
-if [[ ${CURRENTPHP} ]]; then
-    echo "Removing current PHP packages..."
-    yum -q -y remove "php*"
-fi
-
-if [ -e /etc/php.ini ] || [ -e /etc/php.d ]; then
-    # Just in case, back up any existing config, 
-    # moving it out of the way so we definitely have a blank canvas.
-    OLDCONFIG="/root/php-config-before-magento/"
-    echo "Moving old PHP config to $OLDCONFIG"
-    mkdir $OLDCONFIG
-    mv /etc/php* $OLDCONFIG
-fi
-
-if [[ $PHPVERS == "5.3" ]]; then
-     echo "Installing PHP 5.3 (with APC)..."
-     yum -q -y install php-fpm php-gd php-mysql php-mcrypt php-xml php-xmlrpc php-mbstring php-soap php-pecl-memcache php-pecl-redis php-pecl-apc
-
-     # PHP 5.3 specific tweaks
-     sed -ri 's/^;?apc.shm_size.*/apc.shm_size=256M/g' /etc/php.d/apc.ini
-fi
-
-if [[ $PHPVERS == "5.4" ]]; then
-     echo "Installing PHP 5.4..."
-     yum -q -y install php54-gd php54-mysql php54-mcrypt php54-xml php54-xmlrpc php54-mbstring php54-soap php54-pecl-memcache php54-pecl-redis php54-pecl-zendopcache php54-fpm
-
-    # PHP 5.4 specific tweaks
-    sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/opcache.ini
-    sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/opcache.ini
-fi 
-
-if [[ $PHPVERS == "5.5" ]]; then
-    echo "Installing PHP 5.5..."
-    yum -q -y install php55u-gd php55u-mysql php55u-mcrypt php55u-xml php55u-xmlrpc php55u-mbstring php55u-soap php55u-pecl-memcache php55u-pecl-redis php55u-pecl-zendopcache php55u-fpm
-   # PHP 5.5 specific tweaks
-   sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
-   sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
-    
-fi
-
-# Generic PHP tweaks
-
-TIMEZONE=`cat /etc/sysconfig/clock | grep ZONE | cut -d\" -f2`
-echo -e "\nConfiguring PHP."
-if [[ -z ${TIMEZONE} ]]
-then
-  TIMEZONE="UTC"
-fi
-sed -i 's/^safe_mode =.*/safe_mode = Off/g' /etc/php.ini
-sed -ri "s~^;?date.timezone =.*~date.timezone = ${TIMEZONE}~g" /etc/php.ini
-sed -i 's/^; *realpath_cache_size.*/realpath_cache_size = 128K/g' /etc/php.ini
-sed -i 's/^; *realpath_cache_ttl.*/realpath_cache_ttl = 7200/g' /etc/php.ini
-sed -i 's/^memory_limit.*/memory_limit = 512M/g' /etc/php.ini
-sed -i 's/^max_execution_time.*/max_execution_time = 1800/g' /etc/php.ini
-sed -i 's/^expose_php.*/expose_php = off/g' /etc/php.ini
-echo -e "\nPHP configuration complete."
-
-php -v
-
-
-
 
 
 
@@ -305,37 +242,9 @@ else
   NEWUSER=1
 fi
 
-echo -e "\nConfiguring PHP-FPM..."
-if [[ ! -f /etc/php-fpm.d/${DOMAINNAME}.conf ]]
-then
-  mv /etc/php-fpm.d/www.conf /etc/php-fpm.d/www.conf.bak
-  echo "# Default 'www' pool disabled" > /etc/php-fpm.d/www.conf 
-  echo "[${DOMAINNAME}]
-listen = /var/run/php-fpm/${DOMAINNAME}.sock
-listen.owner = ${USERNAME}
-listen.group = apache
-listen.mode = 0660
-user = ${USERNAME}
-group = apache
-pm = dynamic
-pm.max_children = 100
-pm.start_servers = 30
-pm.min_spare_servers = 30
-pm.max_spare_servers = 100
-pm.max_requests = 500
-php_admin_value[error_log] = /var/log/php-fpm/${DOMAINNAME}-error.log
-php_admin_flag[log_errors] = on
-php_admin_flag[zlib.output_compression] = On" > /etc/php-fpm.d/${DOMAINNAME}.conf
-  if [[ ! -f /var/run/php-fpm/php-fpm.pid ]]
-  then
-    /etc/init.d/php-fpm start
-  else
-    /etc/init.d/php-fpm reload
-  fi
-  echo -e "\nDone."
-else
-  echo -e "Configuration appears to already exist.\nContinuing..."
-fi
+# All PHP=FPM config moved to separate script
+. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-php-fpm.sh)
+
 
 HOSTNAME=`hostname`
 VHOSTEXISTS=`httpd -S 2>&1 | grep -v ${HOSTNAME} | grep ${DOMAINNAME}`
