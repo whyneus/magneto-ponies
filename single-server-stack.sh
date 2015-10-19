@@ -117,6 +117,13 @@ then
   exit 1
 fi
 
+echo -ne "\nWebsite document root:\nDefault is /var/www/vhosts/$DOMAINNAME/httpdocs : "
+read DOCROOT
+if [[ -z ${DOCROOT} ]]
+then
+  DOCROOT="/var/www/vhosts/$DOMAINNAME/httpdocs"
+fi
+
 
 echo -ne "\nIs the Database going to be on this server? 
 (script will install and configure Percona 5.6) 
@@ -137,6 +144,7 @@ echo -e "\n\n\n\n-------------------------\n\nSANITY CHECK:
   Domain     : $DOMAINNAME
   User       : $USERNAME
   PHP version: $PHPVERS
+  Document Root: $DOCROOT
 
 NB: if PHP is already installed, this script will remove all config and replace with $PHPVERS optimised for Magento.)
 "
@@ -171,6 +179,33 @@ echo -e "Proceeding with install...\n\n"
 ## First, some packages we might want/need. 
 yum -y -q install git vim jwhois telnet nc mlocate memcached
 yum remove dovecot >/dev/null 2>&1
+
+
+
+
+# Create user and Document Root. Home directory will be one up from $DOCROOT. 
+USERPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n1)
+USEREXIST=`id ${USERNAME} 2>&1 >/dev/null`
+echo -e "\nCreating user ${USERNAME}..."
+if [[ -z ${USEREXIST} ]]
+then
+  echo -e "\nUser already exists.\nCheck that it has permissions to access to ${DOCROOT}.\nContinuing..."
+else
+  mkdir -p $DOCROOT
+  cd $DOCROOT
+  cd ..
+  HOMEDIR=$(pwd)
+  useradd -d $HOMEDIR ${USERNAME}
+  echo ${USERPASS} | passwd --stdin ${USERNAME}
+  chmod o+x $HOMEDIR $DOCROOT
+  chown -R ${USERNAME}:${USERNAME} $HOMEDIR
+  NEWUSER=1
+fi
+
+# All PHP=FPM config moved to separate script
+. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-php-fpm.sh)
+
+
 
 
 
@@ -224,26 +259,6 @@ else
 fi
 echo "# mod_fastcgi in use for PHP-FPM. This file here to prevent 'php' package creating new config." > /etc/httpd/conf.d/php.conf
 
-
-
-USERPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n1)
-USEREXIST=`id ${USERNAME} 2>&1 >/dev/null`
-echo -e "\nCreating user ${USERNAME}..."
-if [[ -z ${USEREXIST} ]]
-then
-  echo -e "\nUser already exists.\nCheck that it has permissions to access to /var/www/vhosts/${DOMAINNAME}.\nContinuing..."
-else
-  mkdir -p /var/www/vhosts
-  useradd -d /var/www/vhosts/${DOMAINNAME} ${USERNAME}
-  echo ${USERPASS} | passwd --stdin ${USERNAME}
-  chmod o+x /var/www/vhosts/${DOMAINNAME}
-  mkdir /var/www/vhosts/${DOMAINNAME}/httpdocs
-  chown ${USERNAME}:${USERNAME} /var/www/vhosts/${DOMAINNAME}/httpdocs
-  NEWUSER=1
-fi
-
-# All PHP=FPM config moved to separate script
-. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-php-fpm.sh)
 
 
 HOSTNAME=`hostname`
@@ -347,43 +362,12 @@ fi
 
 
 
+# Redis install - separate module
+. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-redis.sh)
 
 
 
-
-echo "Installing Redis from IUS..."
-yum -q -y install redis30u
-
-echo "Configuring Redis..."
-
-cp -rp /etc/redis.conf /etc/redis.conf.original
-
-sed -i 's/^\# unixsocket \/tmp\/redis.sock/unixsocket \/tmp\/redis.sock/g' /etc/redis.conf
-sed -i 's/^# unixsocketperm 700/unixsocketperm 777/g' /etc/redis.conf
-
-sed -i 's/^save 900 1/# save 900 1/g' /etc/redis.conf
-sed -i 's/^save 300 10/# save 300 10/g' /etc/redis.conf
-sed -i 's/^save 60 10000/# save 60 10000/g' /etc/redis.conf
-
-sed -i '/^\# maxmemory <bytes>/a maxmemory 1GB' /etc/redis.conf
-sed -i '/^\# maxmemory-policy volatile-lru/a maxmemory-policy allkeys-lru' /etc/redis.conf
-
-
-# System / kernel config
-echo never > /sys/kernel/mm/transparent_hugepage/enabled
-echo 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' >> /etc/rc.local
-
-echo "
-vm.overcommit_memory = 1
-net.core.somaxconn = 1024
-" >> /etc/sysctl.conf
-sysctl -p >/dev/null 2>&1
-
-
-echo "redis soft nofile 16384" >> /etc/security/limits.conf
-echo "redis hard nofile 16384" >> /etc/security/limits.conf
-
-# Cleanup script 
+# Redis Cleanup script 
 HOMEDIR=$(getent passwd $USERNAME | cut -d':' -f6)
 cd $HOMEDIR
 git clone https://github.com/samm-git/cm_redis_tools.git
