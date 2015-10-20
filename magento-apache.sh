@@ -70,7 +70,8 @@ fi
 # Add user if if doesn't exist already
 GETENT=$(getent passwd $USERNAME)
 if [[ -z ${GETENT} ]]; then
-   mkdir -p $DOCROOT
+  USERPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n1)
+  mkdir -p $DOCROOT
   cd $DOCROOT
   cd ..
   HOMEDIR=$(pwd)
