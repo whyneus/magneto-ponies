@@ -101,7 +101,7 @@ while true; do
 done
 
 
-echo -ne "\n\nPrimary website domain name (not including \"www\"): "
+echo -ne "\n\nPrimary website domain name (not including \"www\.\"): "
 read DOMAINNAME
 if [[ -z ${DOMAINNAME} ]]
 then
@@ -207,158 +207,9 @@ fi
 
 
 
+# Apache config moved to separate script
+. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-apache.sh)
 
-
-
-### Apache mod_fastcgi install
-
-
-HTTPDDEVEL=`rpm -qa | grep -e "httpd.*devel.*"`
-echo -e "\nIntalling Apache mod_fastcgi..."
-if [[ -z ${HTTPDDEVEL} ]]
-then
-  yum -q -y install httpd-devel httpd mod_ssl
-fi
-
-sed -i s/^ServerTokens\ OS/ServerTokens\ Prod/g /etc/httpd/conf/httpd.conf
-
-PREPDIRCHECK=`ls /home/rack/ | grep magentowebsetup`
-if [[ -z "$PREPDIRCHECK" ]]
-then
-  PREPDIRREUSE="0"
-  PREPDIR="/home/rack/magentowebsetup-`date +%Y%m%d`_`/bin/date +%H%M`"
-  echo -e "\nCreating prep directory.\nOur working directory will be ${PREPDIR}."
-  mkdir -p $PREPDIR
-else
-  PREPDIRREUSE="1"
-  PREPDIR="/home/rack/${PREPDIRCHECK}"
-  echo -e "\nPrevious prep directory detected.\nReusing ${PREPDIR}."
-fi
-
-MODFCGI=`ls -1 /usr/lib64/httpd/modules/ | grep fastcgi`
-GCCINSTALLED=`command -v gcc`
-MAKEINSTALLED=`command -v make`
-echo -e "\nInstalling mod_fastcgi..."
-if [[ ${PREPDIRREUSE}="1" ]]
-then
-  wget -q -P ${PREPDIR} 'http://www.fastcgi.com/dist/mod_fastcgi-SNAP-0910052141.tar.gz'
-  tar -zxC ${PREPDIR} -f ${PREPDIR}/mod_fastcgi-SNAP-0910052141.tar.gz
-fi
-if [[ -z ${MODFCGI} ]]
-then
-  if [[ -z ${MAKEINSTALLED} ]] || [[ -z ${GCCINSTALLED} ]]
-  then
-    yum -q -y install make gcc
-  fi
-  cd ${PREPDIR}/mod_fastcgi-*
-  make -f Makefile.AP2 top_dir=/usr/lib64/httpd
-  cp .libs/mod_fastcgi.so /usr/lib64/httpd/modules/
-  echo "LoadModule fastcgi_module /usr/lib64/httpd/modules/mod_fastcgi.so" > /etc/httpd/conf.d/fastcgi.conf
-else
-  echo -e "\nModule already appears to be installed.\nContinuing..."
-fi
-echo "# mod_fastcgi in use for PHP-FPM. This file here to prevent 'php' package creating new config." > /etc/httpd/conf.d/php.conf
-
-
-
-HOSTNAME=`hostname`
-VHOSTEXISTS=`httpd -S 2>&1 | grep -v ${HOSTNAME} | grep ${DOMAINNAME}`
-if [[ -z ${VHOSTEXISTS} ]]
-then
-  NAMEDBASEDEXISTS=`grep -e ^NameVirt -R /etc/httpd/`
-  INCLUDEEXISTS=`grep -e ^Include.*vhosts\.d.*conf -R /etc/httpd/`
-  if [[ -z ${NAMEDBASEDEXISTS} ]]
-  then
-    echo -e "\nNameVirtualHost *:80" >> /etc/httpd/conf/httpd.conf
-  fi
-  if [[ -z ${INCLUDEEXISTS} ]]
-  then
-    echo -e "\nInclude vhosts.d/*.conf" >> /etc/httpd/conf/httpd.conf
-  fi
-fi
-
-if [[ -z ${VHOSTEXISTS} ]] && [[ "${DOMAINNAME}" != www.* ]]
-then
-  mkdir -p /etc/httpd/vhosts.d
-  echo "<VirtualHost *:80>
-  ServerName ${DOMAINNAME}
-  ServerAlias www.${DOMAINNAME}
-  DocumentRoot /var/www/vhosts/${DOMAINNAME}/httpdocs
-  SetEnvIf X-Forwarded-Proto https HTTPS=on
-
-  <Directory /var/www/vhosts/${DOMAINNAME}/httpdocs>
-    AllowOverride All
-    Options +FollowSymLinks
-    SetOutputFilter DEFLATE
-    BrowserMatch ^Mozilla/4 gzip-only-text/html
-    BrowserMatch ^Mozilla/4\.0[678] no-gzip
-    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
-    SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
-    Header append Vary User-Agent env=!dont-vary
-    ExpiresActive On
-    ExpiresDefault \"access plus 1 month\"
-  </Directory>
-
-
-  # Allow web fonts across parallel hostnames
-  <FilesMatch \"\.(ttf|otf|eot|svg|woff)$\">
-      <IfModule mod_headers.c>
-      Header set Access-Control-Allow-Origin "*"
-      </IfModule>
-  </FilesMatch>
-
-  CustomLog /var/log/httpd/${DOMAINNAME}-access_log combined
-  ErrorLog /var/log/httpd/${DOMAINNAME}-error_log
-
-  <IfModule mod_fastcgi.c>
-    AddHandler php5-fcgi .php
-    Action php5-fcgi /php5-fcgi
-    Alias /php5-fcgi /dev/shm/${DOMAINNAME}.fcgi
-    FastCGIExternalServer /dev/shm/${DOMAINNAME}.fcgi -socket /var/run/php-fpm/${DOMAINNAME}.sock -flush -idle-timeout 1800
-  </IfModule>
-</VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
-elif [[ -z ${VHOSTEXISTS} ]] && [[ "${DOMAINNAME}" == www.* ]]
-then
-  mkdir -p /etc/httpd/vhosts.d
-  echo "<VirtualHost *:80>
-  ServerName `echo ${DOMAINNAME} | sed 's/^www\.//g'`
-  ServerAlias ${DOMAINNAME}
-  DocumentRoot /var/www/vhosts/`echo ${DOMAINNAME} | sed 's/^www\.//g'`/httpdocs
-  SetEnvIf X-Forwarded-Proto https HTTPS=on
-
-  <Directory /var/www/vhosts/`echo ${DOMAINNAME} | sed 's/^www\.//g'`/httpdocs>
-    AllowOverride All
-    Options +FollowSymLinks
-    SetOutputFilter DEFLATE
-    BrowserMatch ^Mozilla/4 gzip-only-text/html
-    BrowserMatch ^Mozilla/4\.0[678] no-gzip
-    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
-    SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
-    Header append Vary User-Agent env=!dont-vary
-    ExpiresActive On
-    ExpiresDefault \"access plus 1 month\"
-  </Directory>
-
-  # Allow web fonts across parallel hostnames
-  <FilesMatch \"\.(ttf|otf|eot|svg|woff)$\">
-      <IfModule mod_headers.c>
-      Header set Access-Control-Allow-Origin "*"
-      </IfModule>
-  </FilesMatch>
-
-  CustomLog /var/log/httpd/`echo ${DOMAINNAME} | sed 's/^www\.//g'`-access_log combined
-  ErrorLog /var/log/httpd/`echo ${DOMAINNAME} | sed 's/^www\.//g'`-error_log
-
-  <IfModule mod_fastcgi.c>
-    AddHandler php5-fcgi .php
-    Action php5-fcgi /php5-fcgi
-    Alias /php5-fcgi /dev/shm/`echo ${DOMAINNAME} | sed 's/^www\.//g'`.fcgi
-    FastCGIExternalServer /dev/shm/`echo ${DOMAINNAME} | sed 's/^www\.//g'`.fcgi -socket /var/run/php-fpm/`echo ${DOMAINNAME} | sed 's/^www\.//g'`.sock -flush -idle-timeout 1800
-  </IfModule>
-</VirtualHost>" > /etc/httpd/vhosts.d/`echo ${DOMAINNAME} | sed 's/^www\.//g'`.conf
-else
-  echo -e "Virtual host for ${DOMAINNAME} appears to exist.\nNot replacing.\nContinuing..."
-fi
 
 
 
