@@ -3,6 +3,8 @@
 # Script to set up Apache for Magento. 
 # Compiles mod_fastcgi for use with PHP-FPM. 
 #
+# Relies on PHP sockets: /var/run/php-fpm/${DOMAINNAME}.sock and /var/run/php-fpm/${DOMAINNAME}-admin.sock
+# NB: To separate "admin" FPM pool, change "<Location ~ admin>" to "<Location ~ actualAdminPath>". The admin path should be unique for security. 
 
 
 ## Sanity checks - root on RHEL6 or CentOS 6
@@ -19,3 +21,176 @@ if [ "$MAJORVERS"  != 6 ]; then
 fi
 echo "RHEL/CentOS 6 Confirmed."
 
+# Ask for username if we don't already have it
+if [[ -z ${USERNAME} ]]; then
+  echo -ne "\nUsername to create (for SSH/SFTP and FPM owner): "
+  read USERNAME
+  if [[ -z ${USERNAME} ]]
+  then 
+    echo -e "\nWe need a user to assign to this site.\nExiting."
+    exit 1
+  fi
+fi
+
+
+# Ask for domain name if we don't already have it:
+if [[ -z ${DOMAINNAME} ]]; then
+
+  echo -ne "\n\nPrimary website domain name (not including \"www\"): "
+  read DOMAINNAME
+  if [[ -z ${DOMAINNAME} ]]
+  then
+    echo -e "\nWe need a site to configure PHP-FPM on.\nExiting."
+    exit 1
+  fi
+fi 
+
+# Ask for username if we don't already have it
+if [[ -z ${USERNAME} ]]; then
+  echo -ne "\nUsername to create (for SSH/SFTP and FPM owner): "
+  read USERNAME
+  if [[ -z ${USERNAME} ]]
+  then 
+    echo -e "\nWe need a user to assign to this site.\nExiting."
+    exit 1
+  fi
+fi
+
+# Ask for docroot if we don't already have it
+if [[ -z ${DOCROOT} ]]; then
+  echo -ne "\nWebsite document root:\nDefault is /var/www/vhosts/$DOMAINNAME/httpdocs : "
+  read DOCROOT
+  if [[ -z ${DOCROOT} ]]
+  then
+    DOCROOT="/var/www/vhosts/$DOMAINNAME/httpdocs"
+  fi
+fi
+
+
+# Add user if if doesn't exist already
+GETENT=$(getent passwd $USERNAME)
+if [[ -z ${GETENT} ]]; then
+   mkdir -p $DOCROOT
+  cd $DOCROOT
+  cd ..
+  HOMEDIR=$(pwd)
+  useradd -d $HOMEDIR ${USERNAME}
+  echo ${USERPASS} | passwd --stdin ${USERNAME}
+  chmod o+x $HOMEDIR $DOCROOT
+  chown -R ${USERNAME}:${USERNAME} $HOMEDIR
+  NEWUSER=1
+fi
+
+
+### Apache mod_fastcgi install
+
+
+HTTPDDEVEL=`rpm -qa | grep -e "httpd.*devel.*"`
+echo -e "\nIntalling Apache mod_fastcgi..."
+if [[ -z ${HTTPDDEVEL} ]]
+then
+  yum -q -y install httpd-devel httpd mod_ssl
+fi
+
+sed -i s/^ServerTokens\ OS/ServerTokens\ Prod/g /etc/httpd/conf/httpd.conf
+
+PREPDIRCHECK=`ls /home/rack/ | grep magentowebsetup`
+if [[ -z "$PREPDIRCHECK" ]]
+then
+  PREPDIRREUSE="0"
+  PREPDIR="/home/rack/magentowebsetup-`date +%Y%m%d`_`/bin/date +%H%M`"
+  echo -e "\nCreating prep directory.\nOur working directory will be ${PREPDIR}."
+  mkdir -p $PREPDIR
+else
+  PREPDIRREUSE="1"
+  PREPDIR="/home/rack/${PREPDIRCHECK}"
+  echo -e "\nPrevious prep directory detected.\nReusing ${PREPDIR}."
+fi
+
+MODFCGI=`ls -1 /usr/lib64/httpd/modules/ | grep fastcgi`
+GCCINSTALLED=`command -v gcc`
+MAKEINSTALLED=`command -v make`
+echo -e "\nInstalling mod_fastcgi..."
+if [[ ${PREPDIRREUSE}="1" ]]
+then
+  wget -q -P ${PREPDIR} 'http://www.fastcgi.com/dist/mod_fastcgi-SNAP-0910052141.tar.gz'
+  tar -zxC ${PREPDIR} -f ${PREPDIR}/mod_fastcgi-SNAP-0910052141.tar.gz
+fi
+if [[ -z ${MODFCGI} ]]
+then
+  if [[ -z ${MAKEINSTALLED} ]] || [[ -z ${GCCINSTALLED} ]]
+  then
+    yum -q -y install make gcc
+  fi
+  cd ${PREPDIR}/mod_fastcgi-*
+  make -f Makefile.AP2 top_dir=/usr/lib64/httpd
+  cp .libs/mod_fastcgi.so /usr/lib64/httpd/modules/
+  echo "LoadModule fastcgi_module /usr/lib64/httpd/modules/mod_fastcgi.so" > /etc/httpd/conf.d/fastcgi.conf
+else
+  echo -e "\nModule already appears to be installed.\nContinuing..."
+fi
+echo "# mod_fastcgi in use for PHP-FPM. This file here to prevent 'php' package creating new config." > /etc/httpd/conf.d/php.conf
+
+
+
+HOSTNAME=`hostname`
+VHOSTEXISTS=`httpd -S 2>&1 | grep -v ${HOSTNAME} | grep ${DOMAINNAME}`
+if [[ -z ${VHOSTEXISTS} ]]
+then
+  NAMEDBASEDEXISTS=`grep -e ^NameVirt -R /etc/httpd/`
+  INCLUDEEXISTS=`grep -e ^Include.*vhosts\.d.*conf -R /etc/httpd/`
+  if [[ -z ${NAMEDBASEDEXISTS} ]]
+  then
+    echo -e "\nNameVirtualHost *:80" >> /etc/httpd/conf/httpd.conf
+  fi
+  if [[ -z ${INCLUDEEXISTS} ]]
+  then
+    echo -e "\nInclude vhosts.d/*.conf" >> /etc/httpd/conf/httpd.conf
+  fi
+fi
+
+if [[ -z ${VHOSTEXISTS} ]]
+then
+  mkdir -p /etc/httpd/vhosts.d
+  echo "<VirtualHost *:80>
+  ServerName ${DOMAINNAME}
+  ServerAlias www.${DOMAINNAME}
+  DocumentRoot ${DOCROOT}
+  SetEnvIf X-Forwarded-Proto https HTTPS=on
+  <Directory ${DOCROOT}>
+    AllowOverride All
+    Options +FollowSymLinks
+    # Compress JS and CSS. HTML/PHP will be compressed by PHP. 
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/css text/javascript application/javascript
+    </IfModule>
+    ExpiresActive On
+    ExpiresDefault \"access plus 1 month\"
+  </Directory>
+  # Allow web fonts across parallel hostnames
+  <FilesMatch \"\.(ttf|otf|eot|svg|woff)$\">
+      <IfModule mod_headers.c>
+      Header set Access-Control-Allow-Origin "*"
+      </IfModule>
+  </FilesMatch>
+  CustomLog /var/log/httpd/${DOMAINNAME}-access_log combined
+  ErrorLog /var/log/httpd/${DOMAINNAME}-error_log
+  <IfModule mod_fastcgi.c>
+    AddHandler php5-fcgi .php
+    Action php5-fcgi /php5-fcgi
+    Alias /php5-fcgi /dev/shm/${DOMAINNAME}.fcgi
+    FastCGIExternalServer /dev/shm/${DOMAINNAME}.fcgi -socket /var/run/php-fpm/${DOMAINNAME}.sock -flush -idle-timeout 1800
+    FastCGIExternalServer /dev/shm/${DOMAINNAME}-admin.fcgi -socket /var/run/php-fpm/${DOMAINNAME}-admin.sock -flush -idle-timeout 1800
+ 	  <Location ~ admin>
+      # Override Action for “admin” URLs
+      Action application/x-httpd-php /${DOMAINNAME}-admin.fcgi
+    </Location>
+    Alias /${DOMAINNAME}-admin.fcgi /dev/shm/${DOMAINNAME}-admin-php.fcgi
+    
+  </IfModule>
+</VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
+
+
+httpd -S
+chkconfig httpd on
+/etc/init.d/httpd start
