@@ -80,16 +80,16 @@ yum -y remove httpd
 # Install NginX repo
 # https://www.nginx.com/resources/wiki/start/topics/tutorials/install/
 
-if [[ grep -qi "Red Hat" /etc/redhat-release ]]; then
+if grep -qi "Red Hat" /etc/redhat-release; then
   echo "[nginx]
 name=nginx repo
-baseurl=http://nginx.org/packages/rhel/6/$basearch/
+baseurl=http://nginx.org/packages/rhel/6/\$basearch/
 gpgcheck=0
 enabled=1" > /etc/yum.repos.d/nginx.repo
 
 else echo "[nginx]
 name=nginx repo
-baseurl=http://nginx.org/packages/rhel/6/$basearch/
+baseurl=http://nginx.org/packages/centos/6/\$basearch/
 gpgcheck=0
 enabled=1"  > /etc/yum.repos.d/nginx.repo
 fi
