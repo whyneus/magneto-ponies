@@ -529,7 +529,7 @@ fi
 
 
 
-## Service config
+## Service config, for good measure
 for service in php-fpm httpd redis memcached mysql; do
    chkconfig $service on
    service $service restart
@@ -554,8 +554,8 @@ Setup complete.
 This server IP: $(curl -4 icanhazip.com --max-time 3)
 SSH Username  : $USERNAME
 SSH Password  : $USERPASS
-Home Directory: /var/www/vhosts/$DOMAINNAME/
-Web doc root  : /var/www/vhosts/$DOMAINNAME/httpdocs/
+Home Directory: $(getent passwd $USERNAME | cut -d':' -f6)
+Web doc root  : $DOCROOT
 
 " 
 if [[ ! -z ${DBNAME} ]]; then
