@@ -190,7 +190,7 @@ then
     
   </IfModule>
 </VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
-
+fi
 
 httpd -S
 chkconfig httpd on
