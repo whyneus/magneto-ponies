@@ -184,9 +184,9 @@ then
     FastCGIExternalServer /dev/shm/${DOMAINNAME}-admin.fcgi -socket /var/run/php-fpm/${DOMAINNAME}-admin.sock -flush -idle-timeout 1800
  	  <Location ~ admin>
       # Override Action for “admin” URLs
-      Action application/x-httpd-php /${DOMAINNAME}-admin.fcgi
+      Action php5-fcgi /${DOMAINNAME}-admin.fcgi
     </Location>
-    Alias /${DOMAINNAME}-admin.fcgi /dev/shm/${DOMAINNAME}-admin-php.fcgi
+    Alias /${DOMAINNAME}-admin.fcgi /dev/shm/${DOMAINNAME}-admin.fcgi
     
   </IfModule>
 </VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
