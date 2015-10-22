@@ -162,7 +162,11 @@ if [[ $PHPVERS == "5.3" ]]; then
 fi
 
 if [[ $PHPVERS == "5.4" ]]; then
-     echo "Installing PHP 5.4..."
+     if [[ $ENVIRONMENT == "CLOUD" ]];
+     then
+         sed -i s/^enabled=0/enabled=1/g /etc/yum.repos.d/ius-archive.repo
+     fi
+     echo "Installing PHP 5.4 ..."
      yum -q -y install php54-gd php54-mysql php54-mcrypt php54-xml php54-xmlrpc php54-mbstring php54-soap php54-pecl-memcache php54-pecl-redis php54-pecl-zendopcache php54-fpm
 
     # PHP 5.4 specific tweaks
