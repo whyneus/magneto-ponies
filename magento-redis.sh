@@ -42,7 +42,7 @@ echo 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' >> /etc/rc.local
 
 echo "
 vm.overcommit_memory = 1
-net.core.somaxconn = 1024
+net.core.somaxconn = 10240
 " >> /etc/sysctl.conf
 sysctl -p
 
