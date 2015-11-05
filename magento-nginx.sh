@@ -86,7 +86,6 @@ name=nginx repo
 baseurl=http://nginx.org/packages/rhel/6/\$basearch/
 gpgcheck=0
 enabled=1" > /etc/yum.repos.d/nginx.repo
-
 else echo "[nginx]
 name=nginx repo
 baseurl=http://nginx.org/packages/centos/6/\$basearch/
@@ -94,4 +93,81 @@ gpgcheck=0
 enabled=1"  > /etc/yum.repos.d/nginx.repo
 fi
 
-yum install nginx
+yum -y install nginx
+
+# Nginx 'virtualhost'
+
+if [ -e /etc/nginx/conf.d/$DOMAINNAME.conf ]; then
+   echo "/etc/nginx/conf.d/$DOMAINNAME.conf already exists - skipping Nginx server{} config."
+else
+   echo "
+   
+   # Redirect to www. 
+      server {
+        listen 80;
+        server_name $DOMAINNAME;
+        return 301 $scheme://www.\$host\$request_uri;
+   }
+   
+   ## Separate backends for frontend and "admin" - IN PROGRESS
+#   upstream  backend  {
+#     server unix:/var/run/php-fpm/${DOMAINNAME}.sock;
+#  }
+#  upstream  backend-admin  {
+#    server unix:/var/run/php-fpm/${DOMAINNAME}-admin.sock;
+#  }
+#  map  "URL:$request_uri." $fcgi_pass {
+#        default                 backend;
+#        ~URL:.*admin.*          backend-admin;
+# }
+
+server {
+ listen 80;
+ server_name $DOMAINNAME;
+ root $DOCROOT;
+ 
+ access_log /var/log/nginx/$DOMAINNAME-access.log;
+ error_log /var/log/nginx/$DOMAINNAME-error.log;
+ 
+ client_body_buffer_size 8k;
+ client_max_body_size 10M;
+ client_header_buffer_size 1k;
+ large_client_header_buffers 4 16k;
+ 
+ # SSL Termination
+ if (\$server_port = 80) { set \$httpss off; }
+ if (\$http_x_forwarded_proto = "https") { set \$httpss "on"; }
+ 
+ location / {
+ index index.html index.php;
+ try_files \$uri \$uri/ @handler;
+ expires 30d;
+ }
+ 
+ location ~ ^/(app|includes|media/downloadable|pkginfo|report/config.xml|var)/ { deny all; }
+ 
+ location /. { return 404; }
+ 
+ location @handler { rewrite / /index.php; }
+ location ~ .php/ { rewrite ^(.*.php)/ $1 last; }
+ 
+ location ~ .php$
+ {
+ if (!-e \$request_filename) { rewrite / /index.php last; }
+ expires off;
+ fastcgi_pass unix:/var/run/php-fpm/${DOMAINNAME}.sock;
+ fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+ fastcgi_param MAGE_RUN_CODE default;
+ fastcgi_param MAGE_RUN_TYPE store;
+ fastcgi_param HTTPS \$httpss;
+ include fastcgi_params;
+ fastcgi_buffer_size 32k;
+ fastcgi_buffers 512 32k;
+ fastcgi_read_timeout 300;
+ }
+}
+
+
+
+" > /etc/nginx/conf.d/$DOMAINNAME.conf
+fi 
