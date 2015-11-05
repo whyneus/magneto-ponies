@@ -104,6 +104,24 @@ done
 
 fi 
 
+# Ask for web server type, if not already set
+if [[ -z ${WEBSERVER} ]]; then
+
+echo -ne "\n\nWill you be using Apache (default) or Nginx?
+Some developers prefer nginx. If unsure, choose Apache.\n"
+while true; do
+  echo "enter \"apache\" or \"nginx\" : 
+"
+  read WEBSERVER
+
+  if [[ $WEBSERVER == "apache" ]] || [[ $WEBSERVER == "nginx" ]] 
+  then
+    break
+  fi
+done
+
+
+fi
 
 
 # Ask for domain name if we don't already have it:
@@ -212,15 +230,15 @@ then
   echo "[${DOMAINNAME}]
 listen = /var/run/php-fpm/${DOMAINNAME}.sock
 listen.owner = ${USERNAME}
-listen.group = apache
+listen.group =${WEBSERVER}
 listen.mode = 0660
 user = ${USERNAME}
-group = apache
+group = ${WEBSERVER}
 pm = dynamic
 pm.max_children = 100
 pm.start_servers = 30
 pm.min_spare_servers = 30
-pm.max_spare_servers = 100
+pm.max_spare_servers = 50
 pm.max_requests = 500
 php_admin_value[error_log] = /var/log/php-fpm/${DOMAINNAME}-error.log
 php_admin_flag[log_errors] = on
@@ -229,11 +247,11 @@ php_admin_flag[zlib.output_compression] = On" > /etc/php-fpm.d/${DOMAINNAME}.con
 # Separate pool for Magento admin; allows better resource control. 
 echo "[${DOMAINNAME}-admin]
 listen = /var/run/php-fpm/${DOMAINNAME}-admin.sock
-listen.owner = ${USERNAME}
+listen.owner =  ${WEBSERVER}
 listen.group = apache
 listen.mode = 0660
 user = ${USERNAME}
-group = apache
+group = ${WEBSERVER}
 pm = ondemand
 pm.max_children = 20
 pm.max_requests = 50
