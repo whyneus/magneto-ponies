@@ -100,14 +100,14 @@ yum -y install nginx
 if [ -e /etc/nginx/conf.d/$DOMAINNAME.conf ]; then
    echo "/etc/nginx/conf.d/$DOMAINNAME.conf already exists - skipping Nginx server{} config."
 else
-   echo "
+   echo -e "
    
-   # Redirect to www. 
-      server {
-        listen 80;
-        server_name $DOMAINNAME;
-        return 301 $scheme://www.\$host\$request_uri;
-   }
+# Redirect to www. 
+server {
+    listen 80;
+    server_name $DOMAINNAME;
+    return 301 $scheme://www.\$host\$request_uri;
+}
    
    ## Separate backends for frontend and "admin" - IN PROGRESS
 #   upstream  backend  {
@@ -123,7 +123,7 @@ else
 
 server {
  listen 80;
- server_name $DOMAINNAME;
+ server_name www.$DOMAINNAME media.$DOMAINNAME skin.$DOMAINNAME js.$DOMAINNAME;
  root $DOCROOT;
  
  access_log /var/log/nginx/$DOMAINNAME-access.log;
@@ -153,7 +153,7 @@ server {
  
  location ~ .php$
  {
- if (!-e \$request_filename) { rewrite / /index.php last; }
+ if (\0041-e \$request_filename) { rewrite / /index.php last; }
  expires off;
  fastcgi_pass unix:/var/run/php-fpm/${DOMAINNAME}.sock;
  fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
@@ -171,3 +171,7 @@ server {
 
 " > /etc/nginx/conf.d/$DOMAINNAME.conf
 fi 
+
+
+chkconfig nginx on
+/etc/init.d/nginx start
