@@ -124,6 +124,26 @@ then
   DOCROOT="/var/www/vhosts/$DOMAINNAME/httpdocs"
 fi
 
+echo -ne "\n\nWill you be using Apache (default) or Nginx?
+Some developers prefer nginx. If unsure, choose Apache.\n"
+while true; do
+  echo "enter \"apache\" or \"nginx\" : 
+"
+  read WEBSERVER
+
+  if [[ $WEBSERVER == "apache" ]] || [[ $WEBSERVER == "5.4" ]] 
+  then
+    break
+  fi
+done
+
+  
+if [[ -z ${DOMAINNAME} ]]
+then
+  echo -e "\nWe need a site to configure PHP-FPM on.\nExiting."
+  exit 1
+fi
+
 
 echo -ne "\nIs the Database going to be on this server? 
 (script will install and configure Percona 5.6) 
@@ -207,10 +227,14 @@ fi
 
 
 
-# Apache config moved to separate script
-. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-apache.sh)
+# Web server config
 
-
+if [[ $WEBSERVER == "nginx" ]]; then
+. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-nginx.sh)
+else
+  # Apache config moved to separate script
+  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-apache.sh)
+fi 
 
 
 # Redis install - separate module
