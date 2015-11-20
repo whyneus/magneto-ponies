@@ -196,32 +196,32 @@ INNODBLOG=`cat /etc/my.cnf | egrep ^innodb_log_file_size | cut -d= -f2 | tr -d [
 INNODBBUFFER=`cat /etc/my.cnf | egrep ^innodb_buffer_pool_size | cut -d= -f2 | tr -d [A-Z][a-z]`
 INNODBMAXPACKET=`cat /etc/my.cnf | egrep ^max_allowed_packet | cut -d= -f2 | tr -d [A-Z][a-z]`
 
-if [[ $PREPDIRREUSE == "0" ]] || [[ $MYSQLRECONFIG == "1" ]]
-then
-  echo -e "\nUpdating my.cnf."
-  wget -q -P $PREPDIR 'https://raw.github.com/abg/upgrade-my.cnf/master/rsdba/upgrade_mysql_config.py'
-  cp -a /etc/my.cnf ${PREPDIR}/my.cnf.old
-  /usr/bin/python ${PREPDIR}/upgrade_mysql_config.py -l error --config ${PREPDIR}/my.cnf.old --target 5.5 > ${PREPDIR}/my.cnf.new 2>&1
-  if [[ -z ${INNODBLOG} ]] || [[ ${INNODBLOG} -lt 100 ]]
-  then
-    sed -i 's/^innodb_log_file_size/\#innodb_log_file_size/g' ${PREPDIR}/my.cnf.new
-    sed -i '/^\[mysqld\]/ s:$:\ninnodb_log_file_size=200M:' ${PREPDIR}/my.cnf.new
-  fi
-  if [[ -z ${INNODBBUFFER} ]] || [[ ${INNODBBUFFER} -lt 2048 ]]
-  then
-    sed -i 's/^innodb_buffer_pool_size/\#innodb_buffer_pool_size/g' ${PREPDIR}/my.cnf.new
-    sed -i '/^\[mysqld\]/ s:$:\ninnodb_buffer_pool_size=2048M:' ${PREPDIR}/my.cnf.new
-  fi
-  if [[ -z ${INNODBMAXPACKET} ]] || [[ ${INNODBMAXPACKET} -lt 32 ]]
-  then
-    sed -i 's/^max_allowed_packet/\#max_allowed_packet/g' ${PREPDIR}/my.cnf.new
-    sed -i '/^\[mysqld\]/ s:$:\nmax_allowed_packet=32M:' ${PREPDIR}/my.cnf.new
-  fi
-  cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
-  echo -e "\nDone."
-else
-  echo -e "\nmy.cnf already updated.\nContinuing..."
-fi
+#if [[ $PREPDIRREUSE == "0" ]] || [[ $MYSQLRECONFIG == "1" ]]
+#then
+  #echo -e "\nUpdating my.cnf."
+  #wget -q -P $PREPDIR 'https://raw.github.com/abg/upgrade-my.cnf/master/rsdba/upgrade_mysql_config.py'
+  #cp -a /etc/my.cnf ${PREPDIR}/my.cnf.old
+  #/usr/bin/python ${PREPDIR}/upgrade_mysql_config.py -l error --config ${PREPDIR}/my.cnf.old --target 5.5 > ${PREPDIR}/my.cnf.new 2>&1
+  #if [[ -z ${INNODBLOG} ]] || [[ ${INNODBLOG} -lt 100 ]]
+  #then
+    #sed -i 's/^innodb_log_file_size/\#innodb_log_file_size/g' ${PREPDIR}/my.cnf.new
+    #sed -i '/^\[mysqld\]/ s:$:\ninnodb_log_file_size=200M:' ${PREPDIR}/my.cnf.new
+  #fi
+  #if [[ -z ${INNODBBUFFER} ]] || [[ ${INNODBBUFFER} -lt 2048 ]]
+  #then
+    #sed -i 's/^innodb_buffer_pool_size/\#innodb_buffer_pool_size/g' ${PREPDIR}/my.cnf.new
+    #sed -i '/^\[mysqld\]/ s:$:\ninnodb_buffer_pool_size=2048M:' ${PREPDIR}/my.cnf.new
+  #fi
+  #if [[ -z ${INNODBMAXPACKET} ]] || [[ ${INNODBMAXPACKET} -lt 32 ]]
+  #then
+    #sed -i 's/^max_allowed_packet/\#max_allowed_packet/g' ${PREPDIR}/my.cnf.new
+    #sed -i '/^\[mysqld\]/ s:$:\nmax_allowed_packet=32M:' ${PREPDIR}/my.cnf.new
+  #fi
+  #cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
+  #echo -e "\nDone."
+#else
+  #echo -e "\nmy.cnf already updated.\nContinuing..."
+#fi
 
 MYSQLVERSION=`mysqladmin version | grep Server | awk '{print $3}'`
 MYSQLRPM=`rpm -qa | grep mysql55-server`
