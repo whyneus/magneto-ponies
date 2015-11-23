@@ -247,8 +247,8 @@ php_admin_flag[zlib.output_compression] = On" > /etc/php-fpm.d/${DOMAINNAME}.con
 # Separate pool for Magento admin; allows better resource control. 
 echo "[${DOMAINNAME}-admin]
 listen = /var/run/php-fpm/${DOMAINNAME}-admin.sock
-listen.owner =  ${WEBSERVER}
-listen.group = apache
+listen.owner = ${USERNAME}
+listen.group =${WEBSERVER}
 listen.mode = 0660
 user = ${USERNAME}
 group = ${WEBSERVER}
