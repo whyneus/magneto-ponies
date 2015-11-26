@@ -131,7 +131,7 @@ while true; do
 "
   read WEBSERVER
 
-  if [[ $WEBSERVER == "apache" ]] || [[ $WEBSERVER == "5.4" ]] 
+  if [[ $WEBSERVER == "apache" ]] || [[ $WEBSERVER == "nginx" ]] 
   then
     break
   fi
