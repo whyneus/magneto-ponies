@@ -345,7 +345,7 @@ then
     BrowserMatch ^Mozilla/4\.0[678] no-gzip
     BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
     SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
-    Header append Vary User-Agent env=!dont-vary
+    Header append Vary: Accept-Encoding
     ExpiresActive On
     ExpiresDefault \"access plus 1 month\"
   </Directory>
