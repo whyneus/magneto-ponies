@@ -106,7 +106,7 @@ else
 server {
     listen 80;
     server_name $DOMAINNAME;
-    return 301 $scheme://www.\$host\$request_uri;
+    return 301 \$scheme://www.\$host\$request_uri;
 }
    
    ## Separate backends for frontend and "admin" - IN PROGRESS
