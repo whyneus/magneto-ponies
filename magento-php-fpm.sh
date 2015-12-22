@@ -201,6 +201,16 @@ if [[ $PHPVERS == "5.5" ]]; then
     
 fi
 
+## Need to confirm this...
+if [[ $PHPVERS == "5.6" ]]; then
+    echo "Installing PHP 5.6..."
+    yum -q -y install php56u-process php56u-pear php56u-fpm php56u-mysqlnd php56u-mcrypt php56u-gd php56u-xml php56u-common php56u-pecl-jsonc  php56u-pdo php56u-pecl-redis php56u-opcache php56u-soap php56u-mbstring php56u-xmlrpc php56u-bcmath php56u-cli php56u-pecl-igbinary php56u-pecl-memcache php56u-intl
+   # PHP 5.6 specific tweaks
+   sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
+   sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
+    
+fi
+
 # Generic PHP tweaks
 
 TIMEZONE=`cat /etc/sysconfig/clock | grep ZONE | cut -d\" -f2`
