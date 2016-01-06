@@ -237,6 +237,19 @@ if [[ ! -f /etc/php-fpm.d/${DOMAINNAME}.conf ]]
 then
   mv /etc/php-fpm.d/www.conf /etc/php-fpm.d/www.conf.bak
   echo "# Default 'www' pool disabled" > /etc/php-fpm.d/www.conf 
+  
+  # Work out a sensible pm.max_children
+  MEMORY=$(free -m | grep ^Mem | awk '{print $2}')
+  MAGENTONEEDS=120  # Average per process. Should be plenty for most
+  MAXCHILDREN=$(($MEMORY/$MAGENTONEEDS))
+ 
+  # Hard limits of between 50 - 500
+  if [ $MAXCHILDREN -lt 50 ]; then
+     MAXCHILDREN=50   # Much less, and we'll just hit the limit all the time
+  elif [ $MAXCHILDREN -gt 500 ]; then
+     MAXCHILDREN=500  # More than this, and we'll just have too many processes and not enough CPU
+  fi  
+  
   echo "[${DOMAINNAME}]
 listen = /var/run/php-fpm/${DOMAINNAME}.sock
 listen.owner = ${USERNAME}
@@ -245,7 +258,7 @@ listen.mode = 0660
 user = ${USERNAME}
 group = ${WEBSERVER}
 pm = dynamic
-pm.max_children = 100
+pm.max_children = ${MAXCHILDREN}
 pm.start_servers = 30
 pm.min_spare_servers = 30
 pm.max_spare_servers = 50
