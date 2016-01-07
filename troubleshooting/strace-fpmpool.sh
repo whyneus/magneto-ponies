@@ -2,6 +2,9 @@
 
 # will.parsons@rackspace.co.uk
 
+# To run directly:
+# . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/troubleshooting/strace-fpmpool.sh)
+
 STRACE_ARGS="-s4096 -tt  -e trace=sendto,connect,write,open"
 
 echo -ne  "\n You are in $PWD. Save traces here? [y/n] : "
