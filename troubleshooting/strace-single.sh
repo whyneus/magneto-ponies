@@ -47,5 +47,27 @@ time strace $STRACE_ARGS -o $STRACE_OUTPUT php index.php
 
 echo -e "\n\n Strace output saved to $STRACE_OUTPUT \n"
 
+echo "
 
+Analysis examples:
+
+How many SELECT queries? : grep -c SELECT $STRACE_OUTPUT
+Show all SELECT queries  : cat $STRACE_OUTPUT | egrep -o 'SELECT.*\ =\ '
+Show all PHP file opens  : cat $STRACE_OUTPUT | egrep -o 'open.*php'
+
+Examples for Magento: 
+
+- Show PHP file opens, excluding the usual Magento base classes.
+- Use the timings to see which modules might be slow:
+cat $STRACE_OUTPUT | egrep 'open.*php' | egrep -v 'Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c
+
+
+
+- Show number of queries after each PHP file open, excluding base classes:
+cat $STRACE_OUTPUT | egrep -o  'open.*php|SELECT' | egrep -v 'Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c
+
+- ...and only show those which were more than 10 SELECTS (likely to cause slow performance)
+cat $STRACE_OUTPUT | egrep -o  'open.*php|SELECT' | egrep -v 'Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c | egrep -B1 '[0-9][0-9] SELECT' 
+
+"
 
