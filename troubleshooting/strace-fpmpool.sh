@@ -39,13 +39,17 @@ killall strace when done.
 
 
 
-Analysis examples:
+Analysis examples:....
+
+First you'll want to find the trace you're looking for, maybe:
+grep -l SEGV strace.*  # find the one(s) which segfaulted
+grep -l "/path/to/my/page.html"   # find the one which took that request
 
 How many SELECT queries? : grep -c SELECT strace.1234
 Show all SELECT queries  : cat strace.1234 | egrep -o 'SELECT.*\ =\ '
 Show all PHP file opens  : cat strace.1234 | egrep -o 'open.*php'
 
-Note: Tracing live processes may not show many PHP file opens if there's an Opcode Cache running. 
+Note: Tracing live processes may not show many PHP file opens if there's an Opcode Cache running.
 See also 'strace-single.sh' to trace a single run from the command line. 
 
 
