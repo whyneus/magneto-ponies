@@ -28,12 +28,24 @@ if [ -z "$HTTP_HOST" ]; then
    exit 0
    
 fi
+export HTTP_HOST=$HTTP_HOST
 
 echo -ne  "\nEnter the REQUEST_URI (including the slash) : "
 read REQUEST_URI
 
 if [ -z "$REQUEST_URI" ]; then
    echo "Defaulting to homepage / "
+   REQUEST_URI="/"
+fi
+
+export REQUEST_URI=$REQUEST_URI
+
+
+echo -ne  "\n Does this site require/redirect to HTTPS for $REQUEST_URI ?  [y/n] : "
+
+read b
+if [[ $b == "Y" || $b == "y" || $b = "yes" || $b = "on" || $b = "On" ]]; then
+        export HTTPS=on
 fi
 
 
