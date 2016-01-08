@@ -79,11 +79,11 @@ cat $STRACE_OUTPUT | egrep 'open.*php' | egrep -v 'Mage\/|Zend|Varien|lib64|etc/
 
 
 
-- Show number of queries after each PHP file open, excluding base classes:
-cat $STRACE_OUTPUT | egrep -o  'open.*php|SELECT' | egrep -v 'Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c
+- Show number of queries after each PHP or template file open, excluding base classes:
+cat $STRACE_OUTPUT | egrep -o  'open.*php|open.*phtml|SELECT' | egrep -v 'Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c
 
-- ...and only show those which were more than 10 SELECTS (likely to cause slow performance)
-cat $STRACE_OUTPUT | egrep -o  'open.*php|SELECT' | egrep -v 'Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c | egrep -B1 '[0-9][0-9] SELECT' 
+- ...boil down to those with >10 SELECTS, and what might be calling them:
+cat $STRACE_OUTPUT | egrep -o  'open.*php|open.*phtml|SELECT' | egrep -v 'Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c | egrep -B2 '[0-9][0-9] SELECT' 
 
 "
 
