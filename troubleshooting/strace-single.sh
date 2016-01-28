@@ -75,7 +75,7 @@ Examples for Magento:
 
 - Show PHP file opens, excluding the usual Magento base classes.
 - Use the timings to see which modules might be slow:
-cat $STRACE_OUTPUT | egrep 'open.*php' | egrep -v 'app\/code\/core\/Mage\/|Zend|Varien|lib64|etc/php|license'
+cat $STRACE_OUTPUT | egrep 'open.*php' | egrep -v 'app\/code\/core\/|Zend|Varien|lib64|etc/php|license'
 
 
 
