@@ -38,7 +38,7 @@ if [ -z "$REQUEST_URI" ]; then
    REQUEST_URI="/"
 fi
 
-export REQUEST_URI=$REQUEST_URI
+export REQUEST_URI="$REQUEST_URI"
 
 
 echo -ne  "\n Does this site require/redirect to HTTPS for $REQUEST_URI ?  [y/n] : "
@@ -80,12 +80,12 @@ cat $STRACE_OUTPUT | egrep 'open.*php' | egrep -v 'app\/code\/core\/Mage\/|Zend|
 
 
 - Show number of queries after each PHP file open, excluding base classes:
-cat $STRACE_OUTPUT | egrep -o  'open.*php|SELECT' | egrep -v 'app\/code\/core\/Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c
+cat $STRACE_OUTPUT | egrep -o  'open.*php|SELECT' | egrep -v 'app\/code\/core\/|Zend|Varien|lib64|etc/php|license' | uniq -c
 
 - ...boil down to those with >10 SELECTS, and what might be calling them:
-cat $STRACE_OUTPUT | egrep -o  'open.*php|SELECT' | egrep -v 'app\/code\/core\/Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c | egrep -B1 '[0-9][0-9] SELECT' 
+cat $STRACE_OUTPUT | egrep -o  'open.*php|SELECT' | egrep -v 'app\/code\/core\/|Zend|Varien|lib64|etc/php|license' | uniq -c | egrep -B1 '[0-9][0-9] SELECT' 
 
 - ...include templates, which is sometimes useful
-cat $STRACE_OUTPUT | egrep -o  'open.*php|open.*phtmlSELECT' | egrep -v 'app\/code\/core\/Mage\/|Zend|Varien|lib64|etc/php|license' | uniq -c | egrep -B2 '[0-9][0-9] SELECT' 
+cat $STRACE_OUTPUT | egrep -o  'open.*php|open.*phtml|SELECT' | egrep -v 'app\/code\/core\/|Zend|Varien|lib64|etc/php|license' | uniq -c | egrep -B2 '[0-9][0-9] SELECT' 
 "
 
