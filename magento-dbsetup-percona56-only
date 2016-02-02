@@ -150,6 +150,9 @@ innodb-purge-threads                 = 4
 innodb-thread-concurrency            = 32
 innodb_lock_wait_timeout             = 300
 
+optimizer_switch                     = 'use_index_extensions=off'
+transaction_isolation                = 'READ-COMMITTED'
+
 ## Replication and PITR
 #auto-increment-increment            = 2
 #auto-increment-offset               = 1
