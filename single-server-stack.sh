@@ -263,6 +263,14 @@ if [[ $DBSERVER == 1 ]]; then
 
 ### Percona 5.6 setup
 
+MEMORY=`cat /proc/meminfo | grep MemTotal | awk 'OFMT="%.0f" {sum=$2/1024/1024}; END {print sum}'`
+if [[ ${MEMORY} -lt 12 ]]
+then
+  INNODBMEM=`printf "%.0f" $(bc <<< ${MEMORY}*0.75)`
+else
+  INNODBMEM=6
+fi
+
 PREPDIRCHECK=`ls /home/rack/ | grep magentodbsetup`
 if [[ -z "$PREPDIRCHECK" ]]
 then
