@@ -284,18 +284,7 @@ else
   echo -e "\nPrevious prep directory detected.\nReusing ${PREPDIR}."
 fi
 
-if [[ -f /etc/my.cnf ]] && [[ -f ${PREPDIR}/my.cnf.new ]]
-then
-  MY1=`md5sum /etc/my.cnf | awk '{print $1}'`
-  MY2=`md5sum ${PREPDIR}/my.cnf.new | awk '{print $1}'`
-  if [[ "$MY1" != "$MY2" ]]
-  then
-    MYSQLRECONFIG=1
-    NEEDSSECUREINSTALL=0
-  fi
-else
-  NEEDSSECUREINSTALL=1
-  echo "[mysqld]
+echo "[mysqld]
 
 ## General
 datadir                              = /var/lib/mysql
@@ -349,6 +338,9 @@ innodb-log-file-size                 = 200M
 innodb-purge-threads                 = 4
 innodb-thread-concurrency            = 32
 innodb_lock_wait_timeout             = 300
+
+optimizer_switch                     = 'use_index_extensions=off'
+transaction_isolation                = 'READ-COMMITTED'
 
 ## Replication and PITR
 #auto-increment-increment            = 2
