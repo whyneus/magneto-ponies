@@ -70,6 +70,7 @@ Analysis examples:
 How many SELECT queries? : grep -c SELECT $STRACE_OUTPUT
 Show all SELECT queries  : cat $STRACE_OUTPUT | egrep -o 'SELECT.*\ =\ '
 Show all PHP file opens  : cat $STRACE_OUTPUT | egrep -o 'open.*php'
+Repetative SELECT queries: cat $STRACE_OUTPUT | egrep -o 'SELECT.*\)\"\,' | sed 's/[1234567890]\+/N/g' | sort | uniq -c | sort -rn | head
 
 Examples for Magento: 
 
