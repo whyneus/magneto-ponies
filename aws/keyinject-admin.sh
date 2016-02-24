@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# The following IAM roles are required:
+#   AmazonS3FullAccess
+#   IAMReadOnlyAccess
+
 if [ ! -d ~magento/.ssh/ ];
 then
   mkdir ~magento/.ssh/
