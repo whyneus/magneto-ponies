@@ -16,7 +16,7 @@ then
     chown magento:magento ~magento/.ssh/magento-admin*
   fi
   /usr/local/bin/aws s3 mb s3://${keybucket}/
-  /usr/local/bin/aws s3 cp "`getent passwd magento | cut -d: -f6`/.ssh/" s3://${keybucket}/ --recursive --include "magento-admin*"
+  /usr/local/bin/aws s3 cp --sse AES256 "`getent passwd magento | cut -d: -f6`/.ssh/" s3://${keybucket}/ --recursive --include "magento-admin*"
 else
   /usr/local/bin/aws s3 cp s3://${keybucket}/magento-admin `getent passwd magento | cut -d: -f6`/.ssh/
 fi
