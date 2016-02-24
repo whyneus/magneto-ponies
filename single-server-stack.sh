@@ -91,10 +91,11 @@ while true; do
    5.3 - for legacy versions only. 
    5.4 - for Magneto CE 1.6.x / EE 1.11.x  and newer (with patch)
    5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer  
+   7.0 - for Magento 2.0.x
 "
   read PHPVERS
 
-  if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]
+  if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]  || [[ $PHPVERS == "7.0" ]]
   then
     break
   fi
