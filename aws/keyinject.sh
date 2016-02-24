@@ -1,15 +1,15 @@
 #!/bin/bash
 
+if [ ! -d ~magento/.ssh/ ];
+then
+  mkdir ~magento/.ssh/
+  chown magento:magento ~magento/.ssh/
+fi
+
 keybucket=lsynckey-`/usr/local/bin/aws iam list-account-aliases | grep rax\\- | head -n1 | sed 's/"//g' | sed 's/[[:blank:]]//g'`
 bucketexist=`/usr/local/bin/aws s3 ls | grep -c ${keybucket}`
 if [ ${bucketexist} -eq 0 ];
 then
-  if [ ! -d ~magento/.ssh/ ];
-  then
-    mkdir ~magento/.ssh/
-    chown magento:magento ~magento/.ssh/
-  fi
-
   if [ ! -f ~magento/.ssh/magento-admin ];
   then
     ssh-keygen -t rsa -C magento-admin -b 4096 -f ~magento/.ssh/magento-admin -q -N ""
