@@ -246,7 +246,7 @@ echo -e "\nConfiguring PHP-FPM..."
 if [[ ! -f /etc/php-fpm.d/${DOMAINNAME}.conf ]]
 then
   mv /etc/php-fpm.d/www.conf /etc/php-fpm.d/www.conf.bak
-  echo "# Default 'www' pool disabled" > /etc/php-fpm.d/www.conf 
+  echo "; Default 'www' pool disabled" > /etc/php-fpm.d/www.conf 
   
   # Work out a sensible pm.max_children
   MEMORY=$(free -m | grep ^Mem | awk '{print $2}')
