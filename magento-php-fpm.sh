@@ -93,10 +93,11 @@ while true; do
    5.3 - for legacy versions only. 
    5.4 - for Magneto CE 1.6.x / EE 1.11.x  and newer (with patch)
    5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer  
+   7.0 - for Magento 2.0.x
 "
   read PHPVERS
 
-  if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]
+  if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]  || [[ $PHPVERS == "7.0" ]]
   then
     break
   fi
@@ -210,6 +211,15 @@ if [[ $PHPVERS == "5.6" ]]; then
    sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
     
 fi
+
+if [[ $PHPVERS == "7.0" ]]; then
+  echo "Installing PHP 7.0 ..."
+  yum -q -y install php70u-cli php70u-mysqlnd php70u-intl php70u-common php70u-pdo php70u-xmlrpc php70u-devel php70u-fpm php70u-gd php70u-json php70u-soap php70u-gmp php70u-mcrypt php70u-mbstring php70u-xml php70u-bcmath php70u-process php70u-opcache
+     # PHP 5.6 specific tweaks
+   sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
+   sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
+fi
+
 
 # Generic PHP tweaks
 
