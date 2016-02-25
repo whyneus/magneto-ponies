@@ -61,10 +61,13 @@ yum -y -q install git
 # Guess the user: 
 CRONUSER=$(grep vhosts /etc/passwd | head -1 | cut -d':' -f1)
 
-# Ask anyway (with default)
-echo "Enter site code owner/SFTP user:  [$CRONUSER] "
-read userinput
-[ -n "$userinput" ] && CRONUSER=$userinput
+# Ask anyway (with default), if this scpript hasn't been called via single-server-stack.sh. 
+if [[ -z ${DOMAINNAME} ]]
+then
+  echo "Enter site code owner/SFTP user:  [$CRONUSER] "
+  read userinput
+  [ -n "$userinput" ] && CRONUSER=$userinput
+fi
 
 # Get the script
 HOMEDIR=$(getent passwd $CRONUSER | cut -d':' -f6)
