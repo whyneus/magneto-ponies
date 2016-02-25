@@ -9,12 +9,15 @@ then
   chown magento:magento ~magento/.ssh/
 fi
 
-keybucket=`/usr/local/bin/aws s3 ls | grep lsynckey\\-rax\\- | awk '{print $3}'`
+while [ -z ${keybucket} ]
+do
+  keybucket=`/usr/local/bin/aws s3 ls | grep lsynckey\\-rax\\- | awk '{print $3}'`
+  sleep 5
+done
+
 if [ ! -z ${keybucket} ]
 then
   /usr/local/bin/aws s3 cp s3://${keybucket}/magento-admin.pub `getent passwd magento | cut -d: -f6`/.ssh/
   chmod 600 ~magento/.ssh/magento-admin
   chown magento:magento ~magento/.ssh/magento-admin.pub
-else
-  exit 1
 fi
