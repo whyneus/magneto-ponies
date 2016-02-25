@@ -109,17 +109,11 @@ server {
     return 301 \$scheme://www.\$host\$request_uri;
 }
    
-   ## Separate backends for frontend and "admin" - IN PROGRESS
-#   upstream  backend  {
-#     server unix:/var/run/php-fpm/${DOMAINNAME}.sock;
-#  }
-#  upstream  backend-admin  {
-#    server unix:/var/run/php-fpm/${DOMAINNAME}-admin.sock;
-#  }
-#  map  "URL:$request_uri." $fcgi_pass {
-#        default                 backend;
-#        ~URL:.*admin.*          backend-admin;
-# }
+## Set FPM pool socket for Magento Dashboard, based on adminhtml cookie
+map $http_cookie $phpfpm_socket {
+  default unix:/var/run/php-fpm/${DOMAINNAME}.sock;
+  ~adminhtml unix:/var/run/php-fpm/${DOMAINNAME}-admin.sock;
+}
 
 server {
  listen 80${PORTSUFFIX};
@@ -155,7 +149,7 @@ server {
  {
  if (\0041-e \$request_filename) { rewrite / /index.php last; }
  expires off;
- fastcgi_pass unix:/var/run/php-fpm/${DOMAINNAME}.sock;
+ fastcgi_pass $phpfpm_socket;
  fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
  fastcgi_param MAGE_RUN_CODE default;
  fastcgi_param MAGE_RUN_TYPE store;
