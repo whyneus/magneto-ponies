@@ -225,14 +225,6 @@ yum -y -q install git vim jwhois telnet nc mlocate memcached
 yum -y remove dovecot >/dev/null 2>&1
 
 
-if [[ $MAGENTO2 ]]; then
-  echo "Setting up Varnish 4.0 ..."
-  
-  PORTSUFFIX=80
-  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh
-  
-fi
-
 
 
 # Create user and Document Root. Home directory will be one up from $DOCROOT. 
@@ -267,6 +259,14 @@ else
   # Apache config moved to separate script
   . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-apache.sh)
 fi 
+
+if [[ $MAGENTO2 ]]; then
+  echo "Setting up Varnish 4.0 ..."
+  
+  PORTSUFFIX=80
+  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh
+  
+fi
 
 
 # Redis install - separate module
@@ -558,10 +558,9 @@ for service in php-fpm httpd redis memcached mysql; do
    service $service restart
 done
 
-if [[ $MAGENTO2 ]]; then
-   chkconfig varnish on
-   /etc/init.d/varnish restart
-fi
+
+
+
 
 ## iptables for Cloud servers
 if [[ $ENVIRONMENT == "CLOUD" ]]; then
