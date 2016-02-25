@@ -69,16 +69,21 @@ then
   [ -n "$userinput" ] && CRONUSER=$userinput
 fi
 
-# Get the script
-HOMEDIR=$(getent passwd $CRONUSER | cut -d':' -f6)
-cd $HOMEDIR
-git clone https://github.com/samm-git/cm_redis_tools.git
-cd cm_redis_tools
-git submodule update --init --recursive
 
-# Create the cron job
-echo "33 2 * * * /usr/bin/php $HOMEDIR/cm_redis_tools/rediscli.php -s 127.0.0.1 -p 6379 -d 0,1,2" >> /tmp/rediscron
-crontab -l -u $CRONUSER | cat - /tmp/rediscron | crontab -u $CRONUSER -
+if [[ $CRONUSER ]]; then 
 
-echo "Done. Crontab for $CRONUSER:"
-crontab -l -u $CRONUSER 
+      # Get the script
+      HOMEDIR=$(getent passwd $CRONUSER | cut -d':' -f6)
+      cd $HOMEDIR
+      git clone https://github.com/samm-git/cm_redis_tools.git
+      cd cm_redis_tools
+      git submodule update --init --recursive
+      
+      # Create the cron job
+      echo "33 2 * * * /usr/bin/php $HOMEDIR/cm_redis_tools/rediscli.php -s 127.0.0.1 -p 6379 -d 0,1,2" >> /tmp/rediscron
+      crontab -l -u $CRONUSER | cat - /tmp/rediscron | crontab -u $CRONUSER -
+      
+      echo "Done. Crontab for $CRONUSER:"
+      crontab -l -u $CRONUSER 
+
+fi
