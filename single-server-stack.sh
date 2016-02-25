@@ -483,7 +483,7 @@ fi
 
 ## Backups
 
-if [[ ENVIRONMENT == "DEDICATED" ]]; then
+if [[ $ENVIRONMENT == "DEDICATED" ]]; then
   yum -y -q install rs-holland-backup
   echo -e "\n\nHolland MySQL backup installed - ensure Rackspace MySQL backups are configured."
 else
@@ -528,7 +528,7 @@ file-per-database = yes
 #level = 1
 #[mysql:client]
 #defaults-extra-file = /root/.my.cnf
-" >> /etc/holland/backupsets/default.conf
+" > /etc/holland/backupsets/default.conf
 
 
 echo "#! /bin/bash
