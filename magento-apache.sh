@@ -193,7 +193,7 @@ then
   </IfModule>
 </VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
 
-echo "<VirtualHost *:443}>
+echo "<VirtualHost *:443>
   ServerName ${DOMAINNAME}
   ServerAlias www.${DOMAINNAME}
   DocumentRoot ${DOCROOT}
@@ -230,7 +230,7 @@ echo "<VirtualHost *:443}>
     # FastCGIExternalServer /dev/shm/${DOMAINNAME}.fcgi -socket /var/run/php-fpm/${DOMAINNAME}.sock -flush -idle-timeout 1800
     # FastCGIExternalServer /dev/shm/${DOMAINNAME}-admin.fcgi -socket /var/run/php-fpm/${DOMAINNAME}-admin.sock -flush -idle-timeout 1800
  	  <Location ~ admin>
-      # Override Action for “admin” URLs
+      # Override Action for "admin" URLs
       Action php5-fcgi /${DOMAINNAME}-admin.fcgi
     </Location>
     Alias /${DOMAINNAME}-admin.fcgi /dev/shm/${DOMAINNAME}-admin.fcgi
