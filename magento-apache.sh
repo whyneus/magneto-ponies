@@ -193,9 +193,11 @@ then
   </IfModule>
 </VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
 
+MYIP=$(curl -s4 icanhazip.com);
+
 echo "<VirtualHost *:443>
   ServerName ${DOMAINNAME}
-  ServerAlias www.${DOMAINNAME}
+  ServerAlias www.${DOMAINNAME} $MYIP
   DocumentRoot ${DOCROOT}
 
    SSLEngine On
@@ -220,8 +222,8 @@ echo "<VirtualHost *:443>
       Header set Access-Control-Allow-Origin "*"
       </IfModule>
   </FilesMatch>
-  CustomLog /var/log/httpd/${DOMAINNAME}-access_log combined
-  ErrorLog /var/log/httpd/${DOMAINNAME}-error_log
+  CustomLog /var/log/httpd/${DOMAINNAME}-ssl_access_log combined
+  ErrorLog /var/log/httpd/${DOMAINNAME}-ssl_error_log
   <IfModule mod_fastcgi.c>
     AddHandler php5-fcgi .php
     Action php5-fcgi /php5-fcgi
