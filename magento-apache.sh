@@ -143,7 +143,7 @@ then
   INCLUDEEXISTS=`grep -e ^Include.*vhosts\.d.*conf -R /etc/httpd/`
   if [[ -z ${NAMEDBASEDEXISTS} ]]
   then
-    echo -e "\nNameVirtualHost *:80" >> /etc/httpd/conf/httpd.conf
+    echo -e "\nNameVirtualHost *:80${PORTSUFFIX}" >> /etc/httpd/conf/httpd.conf
   fi
   if [[ -z ${INCLUDEEXISTS} ]]
   then
@@ -154,7 +154,7 @@ fi
 if [[ -z ${VHOSTEXISTS} ]]
 then
   mkdir -p /etc/httpd/vhosts.d
-  echo "<VirtualHost *:80>
+  echo "<VirtualHost *:80${PORTSUFFIX}>
   ServerName ${DOMAINNAME}
   ServerAlias www.${DOMAINNAME}
   DocumentRoot ${DOCROOT}
