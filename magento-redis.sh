@@ -55,9 +55,6 @@ chkconfig redis on
 chkconfig --list redis
 
 
-echo "Configuring cleanup Cron job..."
-yum -y -q install git
-
 # Guess the user: 
 CRONUSER=$(grep vhosts /etc/passwd | head -1 | cut -d':' -f1)
 
@@ -71,6 +68,9 @@ fi
 
 
 if [[ $CRONUSER ]]; then 
+
+     echo "Configuring cleanup Cron job..."
+     yum -y -q install git
 
       # Get the script
       HOMEDIR=$(getent passwd $CRONUSER | cut -d':' -f6)
