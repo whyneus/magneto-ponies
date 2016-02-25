@@ -1,5 +1,3 @@
-Scripts to setup lsync between admin and web heads.
-============
 ###### keyinject-admin.sh
 Execute on the admin node to create a keypair and send to S3.
 If keypair on S3 already exists, downloads the private key.
