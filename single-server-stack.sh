@@ -81,6 +81,22 @@ then
   exit 1
 fi
 
+MAGENTO2=false
+echo -e "\n\nWhich Major Magento version is to be used?"
+
+while true; do
+  echo "Valid options:
+   1 - Magento 1.x
+   2 - Magento 2.x
+"
+  read MAJORMAGENTO
+
+  if [[ MAJORMAGENTO == "2" ]]
+  then
+    MAGENTO2=true
+    PHPVERS="7.0"
+    
+  else
 
 
 echo -e "\n\nWhich PHP version should be installed?
@@ -89,15 +105,17 @@ NB: Check compatibility of your Magento version."
 while true; do
   echo "Valid options:
    5.3 - for legacy versions only. 
-   5.4 - for Magneto CE 1.6.x / EE 1.11.x  and newer (with patch)
+   5.4 - for Magento CE 1.6.x / EE 1.11.x  and newer (with patch)
    5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer  
-   7.0 - for Magento 2.0.x
 "
   read PHPVERS
 
   if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]  || [[ $PHPVERS == "7.0" ]]
   then
     break
+  fi
+done
+
   fi
 done
 
@@ -164,6 +182,7 @@ echo -e "\n\n\n\n-------------------------\n\nSANITY CHECK:
 
   Domain     : $DOMAINNAME
   User       : $USERNAME
+  Magento2   : $MAGENTO2
   PHP version: $PHPVERS
   Document Root: $DOCROOT
 
