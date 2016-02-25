@@ -91,11 +91,11 @@ while true; do
 "
   read MAJORMAGENTO
 
-  if [[ MAJORMAGENTO == "2" ]]
+  if [[ $MAJORMAGENTO == "2" ]]
   then
     MAGENTO2=true
     PHPVERS="7.0"
-    
+    break
   else
 
 
@@ -116,6 +116,7 @@ while true; do
   fi
 done
 
+    break
   fi
 done
 
