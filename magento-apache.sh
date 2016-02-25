@@ -144,6 +144,7 @@ then
   if [[ -z ${NAMEDBASEDEXISTS} ]]
   then
     echo -e "\nNameVirtualHost *:80${PORTSUFFIX}" >> /etc/httpd/conf/httpd.conf
+    echo -e "\nNameVirtualHost *:443" >> /etc/httpd/conf/httpd.conf
   fi
   if [[ -z ${INCLUDEEXISTS} ]]
   then
@@ -191,6 +192,52 @@ then
     
   </IfModule>
 </VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
+
+echo "<VirtualHost *:443}>
+  ServerName ${DOMAINNAME}
+  ServerAlias www.${DOMAINNAME}
+  DocumentRoot ${DOCROOT}
+
+   SSLEngine On
+   # Default certificates - swap for real ones when provided
+   SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+   SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+   # SSLCACertificateFile   /etc/pki/tls/certs/cert.ca
+  
+  <Directory ${DOCROOT}>
+    AllowOverride All
+    Options +FollowSymLinks
+    # Compress JS and CSS. HTML/PHP will be compressed by PHP. 
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/css text/javascript application/javascript
+    </IfModule>
+    ExpiresActive On
+    ExpiresDefault \"access plus 1 month\"
+  </Directory>
+  # Allow web fonts across parallel hostnames
+  <FilesMatch \"\.(ttf|otf|eot|svg|woff)$\">
+      <IfModule mod_headers.c>
+      Header set Access-Control-Allow-Origin "*"
+      </IfModule>
+  </FilesMatch>
+  CustomLog /var/log/httpd/${DOMAINNAME}-access_log combined
+  ErrorLog /var/log/httpd/${DOMAINNAME}-error_log
+  <IfModule mod_fastcgi.c>
+    AddHandler php5-fcgi .php
+    Action php5-fcgi /php5-fcgi
+    Alias /php5-fcgi /dev/shm/${DOMAINNAME}.fcgi
+    # These only need to be defined once
+    # FastCGIExternalServer /dev/shm/${DOMAINNAME}.fcgi -socket /var/run/php-fpm/${DOMAINNAME}.sock -flush -idle-timeout 1800
+    # FastCGIExternalServer /dev/shm/${DOMAINNAME}-admin.fcgi -socket /var/run/php-fpm/${DOMAINNAME}-admin.sock -flush -idle-timeout 1800
+ 	  <Location ~ admin>
+      # Override Action for “admin” URLs
+      Action php5-fcgi /${DOMAINNAME}-admin.fcgi
+    </Location>
+    Alias /${DOMAINNAME}-admin.fcgi /dev/shm/${DOMAINNAME}-admin.fcgi
+    
+  </IfModule>
+</VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}-ssl.conf
+
 fi
 
 httpd -S
