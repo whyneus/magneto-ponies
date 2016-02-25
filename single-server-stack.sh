@@ -246,9 +246,6 @@ else
   NEWUSER=1
 fi
 
-# All PHP=FPM config moved to separate script
-. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-php-fpm.sh)
-
 
 
 # Web server config
@@ -264,13 +261,18 @@ if [[ $MAGENTO2 ]]; then
   echo "Setting up Varnish 4.0 ..."
   
   PORTSUFFIX=80
-  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh
+  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh)
   
 fi
 
 
 # Redis install - separate module
 . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-redis.sh)
+
+
+# All PHP=FPM config moved to separate script
+. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-php-fpm.sh)
+
 
 
 
