@@ -183,12 +183,15 @@ echo -e "\n\n\n\n-------------------------\n\nSANITY CHECK:
 
   Domain     : $DOMAINNAME
   User       : $USERNAME
-  Magento2   : $MAGENTO2
   PHP version: $PHPVERS
   Document Root: $DOCROOT
 
 NB: if PHP is already installed, this script will remove all config and replace with $PHPVERS optimised for Magento.)
 "
+if [[ $MAGENTO2 ]]; then
+  echo "Magento 2: Yes (Varnish will aslo be installed)
+fi
+
 
 if [[ $DBSERVER == 1 ]]; then
   echo "
@@ -221,6 +224,14 @@ echo -e "Proceeding with install...\n\n"
 yum -y -q install git vim jwhois telnet nc mlocate memcached
 yum -y remove dovecot >/dev/null 2>&1
 
+
+if [[ $MAGENTO2 ]]; then
+  echo "Setting up Varnish 4.0 ..."
+  
+  PORTSUFFIX=80
+  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh
+  
+fi
 
 
 
@@ -546,6 +557,11 @@ for service in php-fpm httpd redis memcached mysql; do
    chkconfig $service on
    service $service restart
 done
+
+if [[ $MAGENTO2 ]]; then
+   chkconfig varnish on
+   /etc/init.d/varnish restart
+fi
 
 ## iptables for Cloud servers
 if [[ $ENVIRONMENT == "CLOUD" ]]; then
