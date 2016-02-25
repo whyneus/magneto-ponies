@@ -126,7 +126,8 @@ then
   cd ${PREPDIR}/mod_fastcgi-*
   make -f Makefile.AP2 top_dir=/usr/lib64/httpd
   cp .libs/mod_fastcgi.so /usr/lib64/httpd/modules/
-  echo "LoadModule fastcgi_module /usr/lib64/httpd/modules/mod_fastcgi.so" > /etc/httpd/conf.d/fastcgi.conf
+  echo "LoadModule fastcgi_module /usr/lib64/httpd/modules/mod_fastcgi.so
+DirectoryIndex index.php" > /etc/httpd/conf.d/fastcgi.conf
 else
   echo -e "\nModule already appears to be installed.\nContinuing..."
 fi
