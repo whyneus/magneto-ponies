@@ -189,7 +189,7 @@ echo -e "\n\n\n\n-------------------------\n\nSANITY CHECK:
 NB: if PHP is already installed, this script will remove all config and replace with $PHPVERS optimised for Magento.)
 "
 if [[ $MAGENTO2 ]]; then
-  echo "Magento 2: Yes (Varnish will aslo be installed)
+  echo "  Magento 2: Yes (Varnish will aslo be installed)"
 fi
 
 
