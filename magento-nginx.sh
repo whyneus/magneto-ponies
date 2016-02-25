@@ -172,6 +172,9 @@ server {
 " > /etc/nginx/conf.d/$DOMAINNAME.conf
 fi 
 
+# Change port in default.conf
+sed -i s/80/80${PORTSUFFIX}/g /etc/nginx/conf.d/default.conf
+
 
 chkconfig nginx on
 /etc/init.d/nginx start
