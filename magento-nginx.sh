@@ -104,7 +104,7 @@ else
    
 # Redirect to www. 
 server {
-    listen 80;
+    listen 80${PORTSUFFIX};
     server_name $DOMAINNAME;
     return 301 \$scheme://www.\$host\$request_uri;
 }
@@ -122,7 +122,7 @@ server {
 # }
 
 server {
- listen 80;
+ listen 80${PORTSUFFIX};
  server_name www.$DOMAINNAME media.$DOMAINNAME skin.$DOMAINNAME js.$DOMAINNAME;
  root $DOCROOT;
  
