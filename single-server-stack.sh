@@ -250,6 +250,10 @@ fi
 
 # Web server config
 
+if [[ $MAGENTO2 ]]; then
+  PORTSUFFIX=80
+fi
+
 if [[ $WEBSERVER == "nginx" ]]; then
 . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-nginx.sh)
 else
@@ -259,10 +263,7 @@ fi
 
 if [[ $MAGENTO2 ]]; then
   echo "Setting up Varnish 4.0 ..."
-  
-  PORTSUFFIX=80
   . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh)
-  
 fi
 
 
