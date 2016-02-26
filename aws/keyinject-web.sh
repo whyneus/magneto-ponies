@@ -2,6 +2,7 @@
 
 # The following IAM roles are required:
 #   AmazonS3ReadOnlyAccess
+#   AmazonEC2ReadOnlyAccess
 
 if [ ! -d ~magento/.ssh/ ];
 then
@@ -9,9 +10,13 @@ then
   chown magento:magento ~magento/.ssh/
 fi
 
-while [ -z ${keybucket} ]
+region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/ | sed '$ s/.$//'`
+uuid=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+keybucket=`/usr/local/bin/aws ec2 describe-tags --region ${region} --filters "Name=resource-id,Values=${uuid}" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`-lsynckey
+
+while [ -z ${bucketexist} ]
 do
-  keybucket=`/usr/local/bin/aws s3 ls | grep lsynckey\\-rax\\- | awk '{print $3}'`
+  bucketexist=`/usr/local/bin/aws s3 ls | grep ${keybucket}`
   sleep 5
 done
 
