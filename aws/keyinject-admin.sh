@@ -12,7 +12,7 @@ fi
 
 region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/ | sed '$ s/.$//'`
 uuid=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
-keybucket=`/usr/local/bin/aws ec2 describe-tags --region ${region} --filters "Name=resource-id,Values=${uuid}" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`-lsynckey
+keybucket=`/usr/local/bin/aws ec2 describe-tags --region ${region} --filters "Name=resource-id,Values=${uuid}" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`
 bucketexist=`/usr/local/bin/aws s3 ls | grep -c ${keybucket}`
 if [ ${bucketexist} -eq 0 ];
 then
@@ -21,8 +21,8 @@ then
     ssh-keygen -t rsa -C magento-admin -b 4096 -f ~magento/.ssh/magento-admin -q -N ""
     chown magento:magento ~magento/.ssh/magento-admin*
   fi
-  /usr/local/bin/aws s3 mb s3://${keybucket}/
-  /usr/local/bin/aws s3api put-bucket-tagging --bucket ${keybucket} --tagging "TagSet=[{Key=rackuuid,Value=${uuid}}]"
+  /usr/local/bin/aws s3 mb s3://${keybucket}-lsynckey/
+  /usr/local/bin/aws s3api put-bucket-tagging --bucket ${keybucket}-lsynckey --tagging "TagSet=[{Key=rackuuid,Value=${keybucket}}]"
   /usr/local/bin/aws s3 cp --sse AES256 "`getent passwd magento | cut -d: -f6`/.ssh/" s3://${keybucket}/ --recursive --include "magento-admin*"
 else
   /usr/local/bin/aws s3 cp s3://${keybucket}/magento-admin `getent passwd magento | cut -d: -f6`/.ssh/
