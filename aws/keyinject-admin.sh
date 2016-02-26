@@ -10,7 +10,7 @@ then
   chown magento:magento ~magento/.ssh/
 fi
 
-keybucket=lsynckey-`/usr/local/bin/aws ec2 describe-tags --region eu-west-1 --filters "Name=resource-id,Values=`curl -s http://169.254.169.254/latest/meta-data/instance-id`" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`
+keybucket=`/usr/local/bin/aws ec2 describe-tags --region eu-west-1 --filters "Name=resource-id,Values=`curl -s http://169.254.169.254/latest/meta-data/instance-id`" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`-lsynckey
 if [ ${bucketexist} -eq 0 ];
 then
   if [ ! -f ~magento/.ssh/magento-admin ];
