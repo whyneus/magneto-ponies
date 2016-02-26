@@ -2,7 +2,7 @@
 
 # The following IAM roles are required:
 #   AmazonS3FullAccess
-#   IAMReadOnlyAccess
+#   AmazonEC2ReadOnlyAccess
 
 if [ ! -d ~magento/.ssh/ ];
 then
@@ -10,8 +10,7 @@ then
   chown magento:magento ~magento/.ssh/
 fi
 
-keybucket=lsynckey-`/usr/local/bin/aws iam list-account-aliases | grep rax\\- | head -n1 | sed 's/"//g' | sed 's/[[:blank:]]//g'`
-bucketexist=`/usr/local/bin/aws s3 ls | grep -c ${keybucket}`
+keybucket=lsynckey-`/usr/local/bin/aws ec2 describe-tags --region eu-west-1 --filters "Name=resource-id,Values=`curl -s http://169.254.169.254/latest/meta-data/instance-id`" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`
 if [ ${bucketexist} -eq 0 ];
 then
   if [ ! -f ~magento/.ssh/magento-admin ];
