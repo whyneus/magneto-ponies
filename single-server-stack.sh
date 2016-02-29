@@ -188,7 +188,7 @@ echo -e "\n\n\n\n-------------------------\n\nSANITY CHECK:
 
 NB: if PHP is already installed, this script will remove all config and replace with $PHPVERS optimised for Magento.)
 "
-if [[ $MAGENTO2 ]]; then
+if [[ $MAGENTO2 == true ]]; then
   echo "  Magento 2: Yes (Varnish will aslo be installed)"
 fi
 
@@ -250,7 +250,7 @@ fi
 
 # Web server config
 
-if [[ $MAGENTO2 ]]; then
+if [[ $MAGENTO2 == true ]]; then
   PORTSUFFIX=80
 fi
 
@@ -261,7 +261,7 @@ else
   . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-apache.sh)
 fi 
 
-if [[ $MAGENTO2 ]]; then
+if [[ $MAGENTO2 == true ]]; then
   echo "Setting up Varnish 4.0 ..."
   . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh)
 fi
