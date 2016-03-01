@@ -23,7 +23,7 @@ then
   fi
   /usr/local/bin/aws s3 mb s3://${keybucket}-lsynckey/
   /usr/local/bin/aws s3api put-bucket-tagging --bucket ${keybucket}-lsynckey --tagging "TagSet=[{Key=rackuuid,Value=${keybucket}}]"
-  /usr/local/bin/aws s3 cp --sse AES256 "`getent passwd magento | cut -d: -f6`/.ssh/" s3://${keybucket}/ --recursive --include "magento-admin*"
+  /usr/local/bin/aws s3 cp --sse AES256 "`getent passwd magento | cut -d: -f6`/.ssh/" s3://${keybucket}-lsynckey/ --recursive --include "magento-admin*"
 else
   /usr/local/bin/aws s3 cp s3://${keybucket}/magento-admin `getent passwd magento | cut -d: -f6`/.ssh/
   chmod 600 ~magento/.ssh/magento-admin
