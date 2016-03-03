@@ -26,7 +26,7 @@ echo "Configuring redis.conf"
 cp -rp /etc/redis.conf /etc/redis.conf.original
 
 sed -i 's/^\# unixsocket \/tmp\/redis.sock/unixsocket \/tmp\/redis.sock/g' /etc/redis.conf
-sed -i 's/^# unixsocketperm 700/unixsocketperm 777/g' /etc/redis.conf
+sed -i 's/^# unixsocketperm.*/unixsocketperm 777/g' /etc/redis.conf
 
 sed -i 's/^save 900 1/# save 900 1/g' /etc/redis.conf
 sed -i 's/^save 300 10/# save 300 10/g' /etc/redis.conf
