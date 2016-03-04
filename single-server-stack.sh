@@ -270,7 +270,7 @@ fi
 
 if [[ $MAGENTO2 == true ]]; then
   echo "Setting up Varnish 4.0 ..."
-  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh
+  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh)
   echo "Setting up Comoser ..."
   curl -sS https://getcomposer.org/installer | sudo php -d "allow_url_fopen=1" -- --install-dir=/usr/local/bin --filename=composer
 else
