@@ -261,12 +261,6 @@ else
   . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-apache.sh)
 fi 
 
-if [[ $MAGENTO2 == true ]]; then
-  echo "Setting up Varnish 4.0 ..."
-  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh)
-fi
-
-
 # Redis install - separate module
 . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-redis.sh)
 
@@ -274,6 +268,17 @@ fi
 # All PHP=FPM config moved to separate script
 . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-php-fpm.sh)
 
+if [[ $MAGENTO2 == true ]]; then
+  echo "Setting up Varnish 4.0 ..."
+  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh
+  echo "Setting up Comoser ..."
+  curl -sS https://getcomposer.org/installer | sudo php -d "allow_url_fopen=1" -- --install-dir=/usr/local/bin --filename=composer
+else
+  echo "Setting up n98-magerun"
+  wget https://files.magerun.net/n98-magerun.phar -O /usr/local/bin/n98-magerun.phar
+  chmod +x /usr/local/bin/n98-magerun.phar
+  ln -s /usr/local/bin/n98-magerun.phar /usr/local/bin/n98-magerun
+fi
 
 
 
