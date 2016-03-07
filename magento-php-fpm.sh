@@ -125,11 +125,6 @@ if [[ -z $MAJORMAGENTO ]]; then
           fi
        fi
 fi
-echo "DEBUG:"
-echo $MAJORVERS
-echo $MAJORMAGENTO 
-echo $MAGENTO2
-echo $PHPVERS
 
 # Ask for web server type, if not already set
 if [[ -z ${WEBSERVER} ]]; then
