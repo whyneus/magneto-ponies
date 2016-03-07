@@ -49,8 +49,7 @@ echo ${ec2addresses} > /tmp/awsec2webips
 
 # Install lsyncd
 
-lsyncdinstalled=`rpm -q lsyncd`
-if [[ -z ${lsyncdinstalled} ]]
+if ! rpm -qa | grep -qw lsyncd;
 then
   yum -y install lsyncd
   systemctl enable lsyncd.service
