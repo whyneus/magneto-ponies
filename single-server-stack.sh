@@ -326,12 +326,26 @@ then
   PREPDIRREUSE="0"
   PREPDIR="/home/rack/magentodbsetup-`date +%Y%m%d`_`/bin/date +%H%M`"
   echo -e "\nCreating prep directory.\nOur working directory will be ${PREPDIR}."
-  mkdir $PREPDIR
+  mkdir -p $PREPDIR
 else
   PREPDIRREUSE="1"
   PREPDIR="/home/rack/${PREPDIRCHECK}"
   echo -e "\nPrevious prep directory detected.\nReusing ${PREPDIR}."
 fi
+
+if [[ -f /etc/my.cnf ]] && [[ -f ${PREPDIR}/my.cnf.new ]]
+then
+  MY1=`md5sum /etc/my.cnf | awk '{print $1}'`
+  MY2=`md5sum ${PREPDIR}/my.cnf.new | awk '{print $1}'`
+  if [[ "$MY1" != "$MY2" ]]
+  then
+    MYSQLRECONFIG=1
+    NEEDSSECUREINSTALL=0
+  fi
+else
+  NEEDSSECUREINSTALL=1
+fi
+
 
 echo "[mysqld]
 
@@ -430,36 +444,62 @@ log-error                            = /var/log/mysqld.log
 open-files-limit                     = 65535
 
 [mysql]
-no-auto-rehash" > /etc/my.cnf.new
+no-auto-rehash" > $PREPDIR/my.cnf.new
 
-MYSQLVERSION=`mysqladmin version 2>/dev/null | grep Server | awk '{print $3}'`
-MYSQLRPM=`rpm -qa | grep mysql.*-server`
-# If MySQL is installed but it isn't 5.5 or 5.6 MYSQLRPM=`rpm -qa | grep mysql.*-server
-if [[ ! -z $MYSQLRPM ]] && grep -v mysql5[56]-server <<< $MYSQLRPM; then
+
+MYSQLVERSION=`mysqladmin version | grep Server | awk '{print $3}'`
+MYSQLRPM=`rpm -qa | egrep 'mysql55-server|mariadb-server-5.5'`
+if [[ -z $MYSQLRPM ]]
+then
   echo -e "\nUpdating MySQL ${MYSQLVERSION} to latest 5.5."
   yum -q -y install yum-plugin-replace
   yum -q -y replace mysql-server --replace-with mysql55-server
   rm -f /var/lib/mysql/ib_logfile*
   /etc/init.d/mysqld start
   /usr/bin/mysql_upgrade
-  service mysqld restart
+  /etc/init.d/mysqld restart
   chkconfig mysqld on
   echo -e "\nDone."
+else
+  echo -e "\n${MYSQLRPM} appears to already be installed.\nContinuing..."
 fi
 
-echo -e "Installing Percona 5.6."
-yum -q -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm
-/etc/init.d/mysqld stop 2>/dev/null
-rpm -e --nodeps mysql55 mysql55-libs mysql55-server 2>/dev/null
-yum -q -y install Percona-Server-server-56 Percona-Server-client-56 Percona-Server-shared-56
+echo -e "Moving to Percona 5.6."
+
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/mysqld stop
+   rpm -e --nodeps mysql55 mysql55-libs mysql55-server
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl stop mariadb.service
+   rpm -e --nodeps mariadb mariadb-server mariadb-libs
+fi
+
+
+yum -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm
+
+yum -y install Percona-Server-server-56 Percona-Server-client-56 Percona-Server-shared-56
+
 cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
 mkdir /var/lib/mysqltmp
 mkdir /var/lib/mysqllogs
 chmod 1770 /var/lib/mysqltmp
 chown mysql:mysql /var/lib/mysqltmp
 chown mysql:mysql /var/lib/mysqllogs
-chkconfig mysql on
-/etc/init.d/mysql start
+
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/mysql start
+   chkconfig mysql on
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl start mysql.service
+   /bin/systemctl enable  mysql.service
+
+fi
+
+
 /usr/bin/mysql_upgrade
 mysql -e "CREATE FUNCTION fnv1a_64 RETURNS INTEGER SONAME 'libfnv1a_udf.so'"
 mysql -e "CREATE FUNCTION fnv_64 RETURNS INTEGER SONAME 'libfnv_udf.so'"
@@ -483,7 +523,6 @@ password=${MYSQLROOTPASS}" > /root/.my.cnf
     MYSQLROOTPASS=$(grep root /root/.my.cnf | cut -d"=" -f2)
 fi
 
-/etc/init.d/mysql restart
 
 if [[ ! -z ${DBNAME} ]]
 then
