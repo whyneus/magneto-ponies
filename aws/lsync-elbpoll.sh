@@ -88,6 +88,7 @@ then
   echo "settings {
   logfile    = \"/var/log/lsyncd/lsyncd.log\",
   statusFile = \"/var/log/lsyncd/lsyncd-status.log\",
+  insist = 1,
   statusInterval = 20
 }
 
