@@ -27,6 +27,7 @@ done
 if [ ! -z ${keybucket} ]
 then
   /bin/aws s3 cp s3://${keybucket}-lsynckey/magento-admin.pub `getent passwd magento | cut -d: -f6`/.ssh/
-  chmod 600 ~magento/.ssh/magento-admin
-  chown magento:magento ~magento/.ssh/magento-admin.pub
+  cat ~magento/.ssh/magento-admin.pub >> ~magento/.ssh/authorized_keys
+  rm -f ~magento/.ssh/magento-admin.pub
+  chown magento:magento ~magento/.ssh/magento-admin.pub ~magento/.ssh/authorized_keys
 fi
