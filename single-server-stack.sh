@@ -96,6 +96,8 @@ while true; do
     PHPVERS="7.0"
     break
   else
+  
+      if [[ "$MAJORVERS" == "6" ]]; then 
 
 
 echo -e "\n\nWhich PHP version should be installed?
@@ -114,6 +116,10 @@ while true; do
     break
   fi
 done
+
+  else
+     PHPVERS="base"
+  
 
     break
   fi
@@ -189,6 +195,10 @@ NB: if PHP is already installed, this script will remove all config and replace 
 "
 if [[ $MAGENTO2 == true ]]; then
   echo "  Magento 2: Yes (Varnish will aslo be installed)"
+else
+  if [[ "$PHPVERS" == "base" ]]; then 
+     echo "For EL 7, we will use the long-life base PHP version, which is PHP 5.4."
+  fi
 fi
 
 
@@ -420,11 +430,11 @@ log-error                            = /var/log/mysqld.log
 open-files-limit                     = 65535
 
 [mysql]
-no-auto-rehash" > /etc/my.cnf
+no-auto-rehash" > /etc/my.cnf.new
 
 MYSQLVERSION=`mysqladmin version 2>/dev/null | grep Server | awk '{print $3}'`
 MYSQLRPM=`rpm -qa | grep mysql.*-server`
-# If MySQL is installed but it isn't 5.5 or 5.6MYSQLRPM=`rpm -qa | grep mysql.*-server
+# If MySQL is installed but it isn't 5.5 or 5.6 MYSQLRPM=`rpm -qa | grep mysql.*-server
 if [[ ! -z $MYSQLRPM ]] && grep -v mysql5[56]-server <<< $MYSQLRPM; then
   echo -e "\nUpdating MySQL ${MYSQLVERSION} to latest 5.5."
   yum -q -y install yum-plugin-replace
@@ -432,7 +442,7 @@ if [[ ! -z $MYSQLRPM ]] && grep -v mysql5[56]-server <<< $MYSQLRPM; then
   rm -f /var/lib/mysql/ib_logfile*
   /etc/init.d/mysqld start
   /usr/bin/mysql_upgrade
-  /etc/init.d/mysqld restart
+  service mysqld restart
   chkconfig mysqld on
   echo -e "\nDone."
 fi
@@ -559,11 +569,17 @@ fi
 
 
 
-## Service config, for good measure
-for service in php-fpm httpd redis memcached mysql; do
-   chkconfig $service on
-   service $service restart
-done
+## Memcached config, for good measure
+
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/memcached restart
+   chkconfig memcached on
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl start  memcached.service
+   /bin/systemctl enable  memcached.service
+fi
 
 
 
