@@ -23,14 +23,14 @@ else
   rackuuid=$(</tmp/awstag)
 fi
 
-# Run through all ELBs in region to look for the one with the matching rackuuid tag
+# Run through all ELBs in region to look for the one with the matching rackuuid tag but exclude the one with -admin suffix
 # Output to /tmp/awsec2webips to allow use by other scripts
 
 elblist=`/usr/local/bin/aws elb describe-load-balancers --region ${region} --query 'LoadBalancerDescriptions[].LoadBalancerName[]' --output text`
 IFS=$'\t' read -ra elbcheck <<<"${elblist}"
 for i in "${elbcheck[@]}"
 do
-  elbtag=`/usr/local/bin/aws elb describe-tags --load-balancer-name ${i} --region ${region} --query 'TagDescriptions[].Tags[].Value[]' --output text`
+  elbtag=`/usr/local/bin/aws elb describe-tags --load-balancer-name ${i} --region ${region} --query 'TagDescriptions[].Tags[].Value[]' --output text | grep -v "${rackuuid}-admin"`
 
   if [[ ${elbtag} == *"${rackuuid}"* ]]
   then
