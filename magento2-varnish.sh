@@ -2,6 +2,13 @@
 # Set up Varnish 4.0, with Magento 2 config. 
 
 
+MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
+if [[ "$MAJORVERS"  != "6" ]] | [[ "$MAJORVERS"  != "7" ]]; then
+    echo "This script is for RHEL/CentOS 6 or 7 only."
+    exit 1
+fi 
+
+
 echo -e "\nChecking EPEL repository."
 
 # Repo check - EPEL
@@ -23,7 +30,7 @@ then
 fi
 
 
-yum -y install https://repo.varnish-cache.org/redhat/varnish-4.0.el6.rpm
+yum -y install https://repo.varnish-cache.org/redhat/varnish-4.0.el${MAJORVERS}.rpm
 yum -y install varnish
 
 
@@ -36,5 +43,12 @@ sed -i s/^VARNISH_STORAGE_SIZE.*/VARNISH_STORAGE_SIZE=${VARNISHMEMORY}M/g  /etc/
 sed -i s/^VARNISH_LISTEN_PORT.*/VARNISH_LISTEN_PORT=80/g /etc/sysconfig/varnish
 
 
-service varnish restart
-chkconfig varnish on
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/varnish restart
+   chkconfig varnish on
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl restart  varnish.service
+   /bin/systemctl enable  varnish.service
+fi
