@@ -8,6 +8,33 @@ then
   exit 1
 fi
 
+# Sanity check - abort if we detect any databases 
+
+
+EXISTINGDB=$(mysql -Nse "show databases" | egrep -v 'mysql|information_schema|performance_schema|test')
+
+if [[ "$EXISTINGDB" ]]; then 
+
+echo "
+
+ !! ABORTING DATABASE SETUP !! 
+
+This server appears to already have a database other than 'mysql|information_schema|performance_schema|test'
+Aborting setup in case this is a live DB server. 
+
+"
+
+  exit 1
+fi
+
+
+
+MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
+if [[ "$MAJORVERS"  != "6" ]] | [[ "$MAJORVERS"  != "7" ]]; then
+    echo "This script is for RHEL/CentOS 6 or 7 only."
+    exit 1
+fi 
+
 echo -ne "\nDatabase name: "
 read DBNAME
 
@@ -38,28 +65,27 @@ if [[ ! -z "$YUM" ]];
 then
   echo "IUS Found. Continuing..."
 else
-  if [[ -f /root/.rackspace/server_number ]]
-  then
-    SERVERNUMBER=`head -n1 /root/.rackspace/server_number`
-    echo "Subscribe server to IUS repository in RHN Bridge: https://portal.rhn.rackspace.com/search?search_type=systems&search_string=${SERVERNUMBER}&do=search"
-    exit 1
+  if [[ -f /root/.rackspace/server_number ]]; then
+      # This is a Dedicated server - advise on RHN repo end exit. 
+      echo "Server must be subscribed to IUS repository via Rackspace managed RHN channels."
+      exit 1
   else
-    echo "Subscribing to IUS..."
-    iusrelease=`curl -s http://dl.iuscommunity.org/pub/ius/stable/CentOS/6/x86_64/ | grep ius-release | cut -d\" -f8`
-    yum -y install http://dl.iuscommunity.org/pub/ius/stable/CentOS/6/x86_64/${iusrelease}
-    rpm --import /etc/pki/rpm-gpg/IUS-COMMUNITY-GPG-KEY
+      # Cloud server - install IUS from repo
+      iusrelease=$(curl -s http://dl.iuscommunity.org/pub/ius/stable/CentOS/$MAJORVERS/x86_64/ | egrep -o 'href="ius-release.*rpm"' | cut -d'"' -f2)
+      echo " - installing ius-release..."
+      yum -q -y install http://dl.iuscommunity.org/pub/ius/stable/CentOS/$MAJORVERS/x86_64/$iusrelease      
+      rpm --import /etc/pki/rpm-gpg/IUS-COMMUNITY-GPG-KEY
   fi
 fi
 
 MEMORY=`cat /proc/meminfo | grep MemTotal | awk 'OFMT="%.0f" {sum=$2/1024/1024}; END {print sum}'`
 if [[ ${MEMORY} -lt 4 ]]
 then
-  echo -e "\nInstalled memory less than 4GB.\nWe need at least 2GB for memcached on top of MySQL.\nAborting..."
+  echo -e "\nInstalled memory less than 4GB.\n Not enough for single-server Magento stack if you want good performance.\nAborting..."
   exit 1
 fi
 
-if [[ ${MEMORY} -lt 12 ]]
-then
+if [[ ${MEMORY} -lt 12 ]]; then
   INNODBMEM=`printf "%.0f" $(bc <<< ${MEMORY}*0.75)`
 else
   INNODBMEM=6
@@ -95,6 +121,8 @@ then
   fi
 else
   NEEDSSECUREINSTALL=1
+fi
+
   echo "[mysqld]
 
 ## General
@@ -192,42 +220,11 @@ log-error                            = /var/log/mysqld.log
 open-files-limit                     = 65535
 
 [mysql]
-no-auto-rehash" > /etc/my.cnf
-fi
+no-auto-rehash" > $PREPDIR/my.cnf.new
 
-INNODBLOG=`cat /etc/my.cnf | egrep ^innodb_log_file_size | cut -d= -f2 | tr -d [A-Z][a-z]`
-INNODBBUFFER=`cat /etc/my.cnf | egrep ^innodb_buffer_pool_size | cut -d= -f2 | tr -d [A-Z][a-z]`
-INNODBMAXPACKET=`cat /etc/my.cnf | egrep ^max_allowed_packet | cut -d= -f2 | tr -d [A-Z][a-z]`
-
-#if [[ $PREPDIRREUSE == "0" ]] || [[ $MYSQLRECONFIG == "1" ]]
-#then
-  #echo -e "\nUpdating my.cnf."
-  #wget -q -P $PREPDIR 'https://raw.github.com/abg/upgrade-my.cnf/master/rsdba/upgrade_mysql_config.py'
-  #cp -a /etc/my.cnf ${PREPDIR}/my.cnf.old
-  #/usr/bin/python ${PREPDIR}/upgrade_mysql_config.py -l error --config ${PREPDIR}/my.cnf.old --target 5.5 > ${PREPDIR}/my.cnf.new 2>&1
-  #if [[ -z ${INNODBLOG} ]] || [[ ${INNODBLOG} -lt 100 ]]
-  #then
-    #sed -i 's/^innodb_log_file_size/\#innodb_log_file_size/g' ${PREPDIR}/my.cnf.new
-    #sed -i '/^\[mysqld\]/ s:$:\ninnodb_log_file_size=200M:' ${PREPDIR}/my.cnf.new
-  #fi
-  #if [[ -z ${INNODBBUFFER} ]] || [[ ${INNODBBUFFER} -lt 2048 ]]
-  #then
-    #sed -i 's/^innodb_buffer_pool_size/\#innodb_buffer_pool_size/g' ${PREPDIR}/my.cnf.new
-    #sed -i '/^\[mysqld\]/ s:$:\ninnodb_buffer_pool_size=2048M:' ${PREPDIR}/my.cnf.new
-  #fi
-  #if [[ -z ${INNODBMAXPACKET} ]] || [[ ${INNODBMAXPACKET} -lt 32 ]]
-  #then
-    #sed -i 's/^max_allowed_packet/\#max_allowed_packet/g' ${PREPDIR}/my.cnf.new
-    #sed -i '/^\[mysqld\]/ s:$:\nmax_allowed_packet=32M:' ${PREPDIR}/my.cnf.new
-  #fi
-  #cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
-  #echo -e "\nDone."
-#else
-  #echo -e "\nmy.cnf already updated.\nContinuing..."
-#fi
 
 MYSQLVERSION=`mysqladmin version | grep Server | awk '{print $3}'`
-MYSQLRPM=`rpm -qa | grep mysql55-server`
+MYSQLRPM=`rpm -qa | egrep 'mysql55-server|mariadb-server-5.5'`
 if [[ -z $MYSQLRPM ]]
 then
   echo -e "\nUpdating MySQL ${MYSQLVERSION} to latest 5.5."
@@ -244,18 +241,40 @@ else
 fi
 
 echo -e "Moving to Percona 5.6."
+
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/mysqld stop
+   rpm -e --nodeps mysql55 mysql55-libs mysql55-server
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl stop mariadb.service
+   rpm -e --nodeps mariadb mariadb-server mariadb-libs
+fi
+
+
 yum -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm
-/etc/init.d/mysqld stop
-rpm -e --nodeps mysql55 mysql55-libs mysql55-server
+
 yum -y install Percona-Server-server-56 Percona-Server-client-56 Percona-Server-shared-56
+
 cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
 mkdir /var/lib/mysqltmp
 mkdir /var/lib/mysqllogs
 chmod 1770 /var/lib/mysqltmp
 chown mysql:mysql /var/lib/mysqltmp
 chown mysql:mysql /var/lib/mysqllogs
-chkconfig mysql on
-/etc/init.d/mysql start
+
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/mysql start
+   chkconfig mysql on
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl start mysql.service
+   /bin/systemctl enable  mysql.service
+
+fi
+
 /usr/bin/mysql_upgrade
 mysql -e "CREATE FUNCTION fnv1a_64 RETURNS INTEGER SONAME 'libfnv1a_udf.so'"
 mysql -e "CREATE FUNCTION fnv_64 RETURNS INTEGER SONAME 'libfnv_udf.so'"
