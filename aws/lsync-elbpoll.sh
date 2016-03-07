@@ -100,7 +100,7 @@ fi
 
 if [ ! -f /tmp/awslsyncips ];
 then
-  /bin/cp -f /tmp/awsec2webips /tmp/awslsyncips
+  touch /tmp/awslsyncips
 fi
 
 webipchange=`cmp /tmp/awsec2webips /tmp/awslsyncips`
