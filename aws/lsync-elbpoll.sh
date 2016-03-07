@@ -102,7 +102,7 @@ then
   touch /tmp/awslsyncips
 fi
 
-webipchange=`cmp /tmp/awsec2webips /tmp/awslsyncips`
+webipchange=`diff /tmp/awsec2webips /tmp/awslsyncips`
 if [[ ! -z ${webipchange} ]];
 then
   IFS=$'\t' read -ra lsynclist <<<"${ec2addresses}"
