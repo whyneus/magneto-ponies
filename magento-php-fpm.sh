@@ -84,9 +84,8 @@ then
 fi
 
 
-echo "MAJORMAGENTO= $MAJORMAGENTO"
-# Ask for Major Magento version if not already set
-if [[ -z $MAJORMAGENTO ]]; then
+# If PHP version not set by parent, ask the user based on Magento version
+if [[ -z $PHPVERS ]]; then
 
 	echo -e "\n\nWhich Major Magento version is to be used?"
 
@@ -211,7 +210,7 @@ if [[ $PHPVERS == "5.4" ]]; then
 
     # PHP 5.4 specific tweaks
     sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/opcache.ini
-    sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/opcache.ini
+    sed -ri 's/^;?opcache.max_accelerated_files=.*/opcache.max_accelerated_files=16229/g' /etc/php.d/opcache.ini
 fi 
 
 if [[ $PHPVERS == "5.5" ]]; then
@@ -219,7 +218,7 @@ if [[ $PHPVERS == "5.5" ]]; then
     yum -q -y install php55u-gd php55u-mysql php55u-mcrypt php55u-xml php55u-xmlrpc php55u-mbstring php55u-soap php55u-pecl-memcache php55u-pecl-redis php55u-opcache php55u-fpm
    # PHP 5.5 specific tweaks
    sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
-   sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
+   sed -ri 's/^;?opcache.max_accelerated_files=.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
     
 fi
 
@@ -229,7 +228,7 @@ if [[ $PHPVERS == "5.6" ]]; then
     yum -q -y install php56u-process php56u-pear php56u-fpm php56u-mysqlnd php56u-mcrypt php56u-gd php56u-xml php56u-common php56u-pecl-jsonc  php56u-pdo php56u-pecl-redis php56u-opcache php56u-soap php56u-mbstring php56u-xmlrpc php56u-bcmath php56u-cli php56u-pecl-igbinary php56u-pecl-memcache php56u-intl
    # PHP 5.6 specific tweaks
    sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
-   sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
+   sed -ri 's/^;?opcache.max_accelerated_files=.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
     
 fi
 
@@ -238,7 +237,7 @@ if [[ $PHPVERS == "7.0" ]]; then
   yum -q -y install php70u-cli php70u-mysqlnd php70u-intl php70u-common php70u-pdo php70u-xmlrpc php70u-devel php70u-fpm php70u-gd php70u-json php70u-soap php70u-gmp php70u-mcrypt php70u-mbstring php70u-xml php70u-bcmath php70u-process php70u-opcache
      # PHP 5.6 specific tweaks
    sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
-   sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
+   sed -ri 's/^;?opcache.max_accelerated_files=.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
 fi
 
 if [[ $PHPVERS == "base" ]]; then
@@ -246,8 +245,8 @@ if [[ $PHPVERS == "base" ]]; then
      yum -q -y install php-fpm php-gd php-mysql php-mcrypt php-xml php-xmlrpc php-mbstring php-soap php-pecl-memcache php-pecl-redis php-pecl-zendopcache
 
     # PHP 5.4 specific tweaks
-    sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/opcache.ini
-    sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/opcache.ini
+    sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/*opcache.ini
+    sed -ri 's/^;?opcache.max_accelerated_files=.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
 fi
 
 
