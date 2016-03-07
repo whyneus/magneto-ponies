@@ -116,6 +116,6 @@ if [[ $CRONUSER ]]; then
       echo "Done. Crontab for $CRONUSER:"
       crontab -l -u $CRONUSER 
       
-      cd ~
+      cd /root
 
 fi
