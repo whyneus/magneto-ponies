@@ -45,36 +45,15 @@ do
 done
 echo ${ec2addresses} > /tmp/awsec2webips
 
-# Compare list of IPs behind ELB with previously retrieved list
-# If there are differences, recreate lsyncd targets list
+# Install lsyncd
 
-if [ ! -f /tmp/awslsyncips ];
+lsyncdinstalled=`rpm -q lsyncd`
+if [[ -z ${lsyncdinstalled} ]]
 then
-  /bin/cp -f /tmp/awsec2webips /tmp/awslsyncips
-fi
-
-webipchange=`cmp /tmp/awsec2webips /tmp/awslsyncips`
-if [[ ! -z ${webipchange} ]];
-then
-
-echo creating server list
-
-  IFS=$'\t' read -ra lsynclist <<<"${ec2addresses}"
-  webheadnumber=${#lsynclist[@]}
-  webheadnumbercounter=1
-  echo "servers = {" > /etc/lsyncd-targets
-  for i in "${lsynclist[@]}"
-  do
-    if [[ ${webheadnumbercounter} -lt ${webheadnumber} ]]
-    then
-      echo "  \"${i}\"," >> /etc/lsyncd-targets
-      webheadnumbercounter=$[${webheadnumbercounter}+1]
-    else
-      echo "  \"${i}\"" >> /etc/lsyncd-targets
-    fi
-  done
-  echo  "}" >> /etc/lsyncd-targets
-  /bin/cp -f /tmp/awsec2webips /tmp/awslsyncips
+  yum -y install lsyncd
+  systemctl enable lsyncd.service
+  sysctl -w fs.inotify.max_user_watches=163840 >> /etc/sysctl.conf
+  sysctl -p
 fi
 
 # Create the initial lsyncd configuration files
@@ -82,7 +61,6 @@ fi
 if [ ! -f /etc/lsyncd-excludes ];
 then
   echo "magento/.ssh/
-magento/httpdocs/media/
 magento/httpdocs/var/" >> /etc/lsyncd-excludes
 fi
 
@@ -113,4 +91,34 @@ sync {
    },
 }
 end" > /etc/lsyncd.conf
+fi
+
+# Compare list of IPs behind ELB with previously retrieved list
+# If there are differences, recreate lsyncd targets list
+
+if [ ! -f /tmp/awslsyncips ];
+then
+  /bin/cp -f /tmp/awsec2webips /tmp/awslsyncips
+fi
+
+webipchange=`cmp /tmp/awsec2webips /tmp/awslsyncips`
+if [[ ! -z ${webipchange} ]];
+then
+  IFS=$'\t' read -ra lsynclist <<<"${ec2addresses}"
+  webheadnumber=${#lsynclist[@]}
+  webheadnumbercounter=1
+  echo "servers = {" > /etc/lsyncd-targets
+  for i in "${lsynclist[@]}"
+  do
+    if [[ ${webheadnumbercounter} -lt ${webheadnumber} ]]
+    then
+      echo "  \"${i}\"," >> /etc/lsyncd-targets
+      webheadnumbercounter=$[${webheadnumbercounter}+1]
+    else
+      echo "  \"${i}\"" >> /etc/lsyncd-targets
+    fi
+  done
+  echo  "}" >> /etc/lsyncd-targets
+  /bin/cp -f /tmp/awsec2webips /tmp/awslsyncips
+  systemctl restart lsyncd.service
 fi
