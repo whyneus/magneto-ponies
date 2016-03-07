@@ -1,3 +1,27 @@
+#! /bin/bash
+#
+# Set up a basic Redis instance for Magento. 
+# will.parsons@rackspace.co.uk
+#
+
+
+
+## Sanity check - RHEL/CentOS 6 or 7
+
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit 1
+fi
+
+MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
+if [[ "$MAJORVERS"  != "6" ]] | [[ "$MAJORVERS"  != "7" ]]; then
+    echo "This script is for RHEL/CentOS 6 or 7 only."
+    exit 1
+else 
+    echo "RHEL/CentOS $MAJORVERS Confirmed."
+fi 
+
+
 echo -e "\nChecking repositories..."
 YUM=`yum repolist | grep ius`
 if [[ ! -z "$YUM" ]];
@@ -50,9 +74,15 @@ sysctl -p
 echo "redis soft nofile 16384" >> /etc/security/limits.conf
 echo "redis hard nofile 16384" >> /etc/security/limits.conf
 
-chkconfig redis on
-/etc/init.d/redis start
-chkconfig --list redis
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/redis restart
+   chkconfig redis on
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl start  redis.service
+   /bin/systemctl enable  redis.service
+fi
 
 
 # Guess the user: 
