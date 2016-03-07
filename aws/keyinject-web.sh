@@ -2,6 +2,7 @@
 
 # The following tags are required:
 #   rackuuid - all resources related to the deployment should have the same tag
+#              (eg. example.com-20160301)
 
 # The following IAM roles are required:
 #   AmazonS3ReadOnlyAccess
