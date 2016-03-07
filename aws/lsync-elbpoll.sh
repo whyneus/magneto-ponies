@@ -2,7 +2,9 @@
 
 # The following tags are required:
 #   rackuuid - all resources related to the deployment should have the same tag
+#              (eg. example.com-20160301)
 #   rackrole - additional tag assigned to at least the ELB the admin server is behind
+#              must be in the format rackuuid-admin (eg. example.com-20160301-admin)
 
 # The following IAM roles are required:
 #   AmazonEC2ReadOnlyAccess
