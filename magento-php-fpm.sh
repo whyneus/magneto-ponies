@@ -1,11 +1,13 @@
 #! /bin/bash
 #
-# Script to set up our stack on a single server
+# Script to set PHP-FPM for Magento Web servers
+# For RHEL/CentOS 6 or 7
+#
 # will.parsons@rackspace.co.uk
 #
 
 
-## Sanity check - RHEL6 or CentOS 6
+## Sanity check - RHEL/CentOS 6 or 7
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -13,12 +15,12 @@ if [ "$EUID" -ne 0 ]
 fi
 
 MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-if [ "$MAJORVERS"  != 6 ]; then
-   echo "This script is for CentOS 6 / RHEL 6  only."
-   exit 1
-fi
-echo "RHEL/CentOS 6 Confirmed."
-
+if [[ "$MAJORVERS"  != "6" ]] | [[ "$MAJORVERS"  != "7" ]]; then
+    echo "This script is for RHEL/CentOS 6 or 7 only."
+    exit 1
+else 
+    echo "RHEL/CentOS $MAJORVERS Confirmed."
+fi 
 
 ## Environment check - Cloud or Dedicated?
 
@@ -66,9 +68,9 @@ else
       exit 1
   else
       # Cloud server - install IUS from repo
-      iusrelease=$(curl -s http://dl.iuscommunity.org/pub/ius/stable/CentOS/6/x86_64/ | grep ius-release | cut -d'"' -f8)
+      iusrelease=$(curl -s http://dl.iuscommunity.org/pub/ius/stable/CentOS/$MAJORVERS/x86_64/ | egrep -o 'href="ius-release.*rpm"' | cut -d'"' -f2)
       echo " - installing ius-release..."
-      yum -q -y install http://dl.iuscommunity.org/pub/ius/stable/CentOS/6/x86_64/$iusrelease      
+      yum -q -y install http://dl.iuscommunity.org/pub/ius/stable/CentOS/$MAJORVERS/x86_64/$iusrelease      
       rpm --import /etc/pki/rpm-gpg/IUS-COMMUNITY-GPG-KEY
   fi
 fi
@@ -81,29 +83,53 @@ then
   exit 1
 fi
 
-# Ask for PHP version if not already set
-if [[ -z "$PHPVERS" ]]; then
 
+echo "MAJORMAGENTO= $MAJORMAGENTO"
+# Ask for Major Magento version if not already set
+if [[ -z $MAJORMAGENTO ]]; then
 
-echo -e "\n\nWhich PHP version should be installed?
-NB: Check compatibility of your Magento version."
+	echo -e "\n\nWhich Major Magento version is to be used?"
 
-while true; do
-  echo "Valid options:
-   5.3 - for legacy versions only. 
-   5.4 - for Magneto CE 1.6.x / EE 1.11.x  and newer (with patch)
-   5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer  
-   7.0 - for Magento 2.0.x
+	echo "Valid options:
+	   1 - Magento 1.x
+	   2 - Magento 2.x
 "
-  read PHPVERS
+	read MAJORMAGENTO
 
-  if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]  || [[ $PHPVERS == "7.0" ]]
-  then
-    break
-  fi
-done
+	if [[ $MAJORMAGENTO == "2" ]]; then
+	    MAGENTO2=true
+	    PHPVERS="7.0"
+	else
+	   if [[ $MAJORVERS == 7 ]]; then 
+	      # Stick to the vendor-supported PHP 5.4 for now. 
+	      PHPVERS="base"
+	   else
+	           # For CentOS 6, ask which to install (if not set in a parent script)
+		   if [[ -z "$PHPVERS" ]]; then
 
-fi 
+		      echo -e "\n\nWhich PHP version should be installed?
+			    NB: Check compatibility of your Magento version."
+		      while true; do
+			 echo "Valid options:
+				   5.3 - for legacy versions only. 
+				   5.4 - for Magento CE 1.6.x / EE 1.11.x  and newer (with patch)
+				   5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer
+
+	"
+			 read PHPVERS 
+			 if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]  || [[ $PHPVERS == "7.0" ]];  then
+			    break
+			 fi
+		      done
+	            fi
+          fi
+       fi
+fi
+echo "DEBUG:"
+echo $MAJORVERS
+echo $MAJORMAGENTO 
+echo $MAGENTO2
+echo $PHPVERS
 
 # Ask for web server type, if not already set
 if [[ -z ${WEBSERVER} ]]; then
@@ -220,6 +246,15 @@ if [[ $PHPVERS == "7.0" ]]; then
    sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/*opcache.ini
 fi
 
+if [[ $PHPVERS == "base" ]]; then
+     echo "Using CentOS 7 base PHP (5.4)..."
+     yum -q -y install php-fpm php-gd php-mysql php-mcrypt php-xml php-xmlrpc php-mbstring php-soap php-pecl-memcache php-pecl-redis php-pecl-zendopcache
+
+    # PHP 5.4 specific tweaks
+    sed -ri 's/^;?opcache.memory_consumption.*/opcache.memory_consumption=256/g' /etc/php.d/opcache.ini
+    sed -ri 's/^;?opcache.max_accelerated_files=4000.*/opcache.max_accelerated_files=16229/g' /etc/php.d/opcache.ini
+fi
+
 
 # Generic PHP tweaks
 
@@ -296,21 +331,22 @@ php_admin_value[memory_limit] = 1024M" > /etc/php-fpm.d/${DOMAINNAME}-admin.conf
 
 
 
-  if [[ ! -f /var/run/php-fpm/php-fpm.pid ]]
-  then
-    /etc/init.d/php-fpm start
-  else
-    /etc/init.d/php-fpm reload
-  fi
   echo -e "\nDone."
 else
   echo -e "Configuration appears to already exist.\nContinuing..."
 fi
 
-chkconfig php-fpm on
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/php-fpm restart
+   chkconfig php-fpm on
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl start  php-fpm.service
+   /bin/systemctl enable  php-fpm.service
+fi
+
 
 echo "PHP-FPM config complete; the following sockets have been configured:"
 ls -al /var/run/php-fpm/*sock
-
-
 
