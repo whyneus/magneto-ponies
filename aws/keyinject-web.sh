@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# The following tags are required:
+#   rackuuid - all resources related to the deployment should have the same tag
+
 # The following IAM roles are required:
 #   AmazonS3ReadOnlyAccess
 #   AmazonEC2ReadOnlyAccess
