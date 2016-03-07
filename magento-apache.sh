@@ -155,8 +155,8 @@ else
 DirectoryIndex index.php" > /etc/httpd/conf.d/php.conf
 fi 
 
-
-
+# Add PORTSUFFIX to listen port
+sed -i s/^Listen\ 80$/Listen\ 80${PORTSUFFIX}/g /etc/httpd/conf/httpd.conf
 
 
 HOSTNAME=`hostname`
