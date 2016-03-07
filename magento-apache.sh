@@ -89,11 +89,13 @@ fi
 # Basic package installs 
 
 yum -q -y install httpd mod_ssl
-sed -i s/^ServerTokens\ OS/ServerTokens\ Prod/g /etc/httpd/conf/httpd.conf
 
 
 
 if [[ $MAJORVERS == "6" ]]; then 
+
+sed -i s/^ServerTokens\ OS/ServerTokens\ Prod/g /etc/httpd/conf/httpd.conf
+
 
 ### Apache mod_fastcgi install
 
@@ -145,6 +147,8 @@ echo "# mod_fastcgi in use for PHP-FPM. This file here to prevent 'php' package 
 
 
 else 
+   echo "ServerTokens Prod" >> /etc/httpd/conf/httpd.conf
+
    echo "# Apache 2.4 using PHP-FPM. Not using loading mod_php. 
 # This file here to prevent 'php' package creating new config.
 
