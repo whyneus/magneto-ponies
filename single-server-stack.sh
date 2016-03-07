@@ -476,8 +476,10 @@ yum -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/per
 
 yum -y install Percona-Server-server-56 Percona-Server-client-56 Percona-Server-shared-56
 
-cp /etc/my.cnf ${PREPDIR}/my.cnf.backup
-cp -naf ${PREPDIR}/my.cnf.new /etc/my.cnf
+if [[ -f /etc/my.cnf ]]; then 
+  mv /etc/my.cnf ${PREPDIR}/my.cnf.backup
+fi
+cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
 mkdir /var/lib/mysqltmp
 mkdir /var/lib/mysqllogs
 chmod 1770 /var/lib/mysqltmp
