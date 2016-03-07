@@ -7,19 +7,22 @@
 # NB: To separate "admin" FPM pool, change "<Location ~ admin>" to "<Location ~ actualAdminPath>". The admin path should be unique for security. 
 
 
-## Sanity checks - root on RHEL6 or CentOS 6
+## Sanity checks - root on RHEL/CentOS 6 or 7
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
   exit 1
 fi
 
+
 MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-if [ "$MAJORVERS"  != 6 ]; then
-   echo "This script is for CentOS 6 / RHEL 6  only."
-   exit 1
-fi
-echo "RHEL/CentOS 6 Confirmed."
+if [[ "$MAJORVERS"  != "6" ]] | [[ "$MAJORVERS"  != "7" ]]; then
+    echo "This script is for RHEL/CentOS 6 or 7 only."
+    exit 1
+else 
+    echo "RHEL/CentOS $MAJORVERS Confirmed."
+fi 
+
 
 # Ask for username if we don't already have it
 if [[ -z ${USERNAME} ]]; then
@@ -83,8 +86,16 @@ if [[ -z ${GETENT} ]]; then
 fi
 
 
-### Apache mod_fastcgi install
+# Basic package installs 
 
+yum -q -y install httpd mod_ssl
+sed -i s/^ServerTokens\ OS/ServerTokens\ Prod/g /etc/httpd/conf/httpd.conf
+
+
+
+if [[ $MAJORVERS == "6" ]]; then 
+
+### Apache mod_fastcgi install
 
 HTTPDDEVEL=`rpm -qa | grep -e "httpd.*devel.*"`
 echo -e "\nIntalling Apache mod_fastcgi..."
@@ -92,8 +103,6 @@ if [[ -z ${HTTPDDEVEL} ]]
 then
   yum -q -y install httpd-devel httpd mod_ssl
 fi
-
-sed -i s/^ServerTokens\ OS/ServerTokens\ Prod/g /etc/httpd/conf/httpd.conf
 
 PREPDIRCHECK=`ls /home/rack/ | grep magentowebsetup`
 if [[ -z "$PREPDIRCHECK" ]]
@@ -135,6 +144,17 @@ echo "# mod_fastcgi in use for PHP-FPM. This file here to prevent 'php' package 
 
 
 
+else 
+   echo "# Apache 2.4 using PHP-FPM. Not using loading mod_php. 
+# This file here to prevent 'php' package creating new config.
+
+DirectoryIndex index.php" > /etc/httpd/conf.d/php.conf
+fi 
+
+
+
+
+
 HOSTNAME=`hostname`
 VHOSTEXISTS=`httpd -S 2>&1 | grep -v ${HOSTNAME} | grep ${DOMAINNAME}`
 if [[ -z ${VHOSTEXISTS} ]]
@@ -152,9 +172,12 @@ then
   fi
 fi
 
-if [[ -z ${VHOSTEXISTS} ]]
-then
+if [[ -z ${VHOSTEXISTS} ]]; then
+
+if [[ $MAJORVERS == "6" ]]; then
+
   mkdir -p /etc/httpd/vhosts.d
+
   echo "<VirtualHost *:80${PORTSUFFIX}>
   ServerName ${DOMAINNAME}
   ServerAlias www.${DOMAINNAME}
@@ -240,8 +263,103 @@ echo "<VirtualHost *:443>
   </IfModule>
 </VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}-ssl.conf
 
+chkconfig httpd on
+/etc/init.d/httpd restart
+
+fi 
+
+if [[ $MAJORVERS == "7" ]]; then
+
+echo "<Proxy \"unix:/var/run/php-fpm/${DOMAINNAME}.sock|fcgi://php-fpm\">
+  ProxySet disablereuse=off
+</Proxy>
+<Proxy \"unix:/var/run/php-fpm/${DOMAINNAME}-admin.sock|fcgi://php-fpm-admin\">
+  ProxySet disablereuse=off
+</Proxy>
+" >> /etc/httpd/conf.d/fpm-proxy.conf
+
+
+mkdir -p /etc/httpd/vhosts.d
+  echo "<VirtualHost *:80${PORTSUFFIX}>
+  ServerName ${DOMAINNAME}
+  ServerAlias www.${DOMAINNAME}
+  DocumentRoot ${DOCROOT}
+  SetEnvIf X-Forwarded-Proto https HTTPS=on
+  <Directory ${DOCROOT}>
+    AllowOverride All
+    Options +FollowSymLinks
+    # Compress JS and CSS. HTML/PHP will be compressed by PHP. 
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/css text/javascript application/javascript
+    </IfModule>
+    ExpiresActive On
+    ExpiresDefault \"access plus 1 month\"
+  </Directory>
+  # Allow web fonts across parallel hostnames
+  <FilesMatch \"\.(ttf|otf|eot|svg|woff)$\">
+      <IfModule mod_headers.c>
+      Header set Access-Control-Allow-Origin "*"
+      </IfModule>
+  </FilesMatch>
+  CustomLog /var/log/httpd/${DOMAINNAME}-access_log combined
+  ErrorLog /var/log/httpd/${DOMAINNAME}-error_log
+
+  <FilesMatch \.php$>
+    SetHandler proxy:fcgi://php-fpm
+  </FilesMatch>
+  <LocationMatch \".*/admin/(.*)\.php$\">
+     SetHandler proxy:fcgi://php-fpm-admin
+  </LocationMatch>
+
+</VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
+
+MYIP=$(curl -s4 icanhazip.com);
+
+echo "<VirtualHost *:443>
+  ServerName ${DOMAINNAME}
+  ServerAlias www.${DOMAINNAME} $MYIP
+  DocumentRoot ${DOCROOT}
+
+   SSLEngine On
+   # Default certificates - swap for real ones when provided
+   SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+   SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+   # SSLCACertificateFile   /etc/pki/tls/certs/cert.ca
+  
+  <Directory ${DOCROOT}>
+    AllowOverride All
+    Options +FollowSymLinks
+    # Compress JS and CSS. HTML/PHP will be compressed by PHP. 
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/css text/javascript application/javascript
+    </IfModule>
+    ExpiresActive On
+    ExpiresDefault \"access plus 1 month\"
+  </Directory>
+  # Allow web fonts across parallel hostnames
+  <FilesMatch \"\.(ttf|otf|eot|svg|woff)$\">
+      <IfModule mod_headers.c>
+      Header set Access-Control-Allow-Origin "*"
+      </IfModule>
+  </FilesMatch>
+  CustomLog /var/log/httpd/${DOMAINNAME}-ssl_access_log combined
+  ErrorLog /var/log/httpd/${DOMAINNAME}-ssl_error_log
+
+  <FilesMatch \.php$>
+    SetHandler proxy:fcgi://php-fpm
+  </FilesMatch>
+  <LocationMatch \".*/admin/(.*)\.php$\">
+     SetHandler proxy:fcgi://php-fpm-admin
+  </LocationMatch>
+
+</VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}-ssl.conf
+
+
+/bin/systemctl restart  httpd.service
+/bin/systemctl enable  httpd.service
+
+fi 
+
 fi
 
 httpd -S
-chkconfig httpd on
-/etc/init.d/httpd start
