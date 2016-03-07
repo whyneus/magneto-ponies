@@ -55,19 +55,7 @@ then
   systemctl enable lsyncd.service
   sysctl -w fs.inotify.max_user_watches=163840 >> /etc/sysctl.conf
   sysctl -p
-fi
-
-# Create the initial lsyncd configuration files
-
-if [ ! -f /etc/lsyncd-excludes ];
-then
-  echo "magento/.ssh/
-magento/httpdocs/var/" >> /etc/lsyncd-excludes
-fi
-
-defaultlsyncconf=`grep -v ^\\-\\- /etc/lsyncd.conf`
-if [[ -z ${defaultlsyncconf} ]]
-then
+  
   echo "settings {
   logfile    = \"/var/log/lsyncd/lsyncd.log\",
   statusFile = \"/var/log/lsyncd/lsyncd-status.log\",
@@ -92,6 +80,14 @@ sync {
    },
 }
 end" > /etc/lsyncd.conf
+fi
+
+# Create the initial lsyncd configuration files
+
+if [ ! -f /etc/lsyncd-excludes ];
+then
+  echo "magento/.ssh/
+magento/httpdocs/var/" >> /etc/lsyncd-excludes
 fi
 
 # Compare list of IPs behind ELB with previously retrieved list
