@@ -81,49 +81,44 @@ then
 fi
 
 MAGENTO2=false
+
+
 echo -e "\n\nWhich Major Magento version is to be used?"
 
-while true; do
-  echo "Valid options:
-   1 - Magento 1.x
-   2 - Magento 2.x
+	echo "Valid options:
+	   1 - Magento 1.x
+	   2 - Magento 2.x
 "
-  read MAJORMAGENTO
+	read MAJORMAGENTO
 
-  if [[ $MAJORMAGENTO == "2" ]]
-  then
-    MAGENTO2=true
-    PHPVERS="7.0"
-    break
-  else
-  
-      if [[ "$MAJORVERS" == "6" ]]; then 
+	if [[ $MAJORMAGENTO == "2" ]]; then
+	    MAGENTO2=true
+	    PHPVERS="7.0"
+	else
+	   if [[ $MAJORVERS == 7 ]]; then 
+	      # Stick to the vendor-supported PHP 5.4 for now. 
+	      PHPVERS="base"
+	   else
+	           # For CentOS 6, ask which to install (if not set in a parent script)
+		   if [[ -z "$PHPVERS" ]]; then
 
+		      echo -e "\n\nWhich PHP version should be installed?
+			    NB: Check compatibility of your Magento version."
+		      while true; do
+			 echo "Valid options:
+				   5.3 - for legacy versions only. 
+				   5.4 - for Magento CE 1.6.x / EE 1.11.x  and newer (with patch)
+				   5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer
+	"
+			 read PHPVERS 
+			 if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]  || [[ $PHPVERS == "7.0" ]];  then
+			    break
+			 fi
+		      done
+	            fi
+          fi
+       fi
 
-echo -e "\n\nWhich PHP version should be installed?
-NB: Check compatibility of your Magento version."
-
-while true; do
-  echo "Valid options:
-   5.3 - for legacy versions only. 
-   5.4 - for Magento CE 1.6.x / EE 1.11.x  and newer (with patch)
-   5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer  
-"
-  read PHPVERS
-
-  if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]  || [[ $PHPVERS == "7.0" ]]
-  then
-    break
-  fi
-done
-
-  else
-     PHPVERS="base"
-  
-
-    break
-  fi
-done
 
 
 echo -ne "\n\nPrimary website domain name (not including \"www\.\"): "
