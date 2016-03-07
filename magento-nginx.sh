@@ -7,7 +7,7 @@
 
 
 
-## Sanity checks - root on RHEL6 or CentOS 6
+## Sanity checks - root on RHEL/CentOS 6 or 7
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -15,11 +15,12 @@ if [ "$EUID" -ne 0 ]
 fi
 
 MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-if [ "$MAJORVERS"  != 6 ]; then
-   echo "This script is for CentOS 6 / RHEL 6  only."
-   exit 1
-fi
-echo "RHEL/CentOS 6 Confirmed."
+if [[ "$MAJORVERS"  != "6" ]] | [[ "$MAJORVERS"  != "7" ]]; then
+    echo "This script is for RHEL/CentOS 6 or 7 only."
+    exit 1
+else 
+    echo "RHEL/CentOS $MAJORVERS Confirmed."
+fi 
 
 
 
@@ -83,12 +84,12 @@ yum -y remove httpd
 if grep -qi "Red Hat" /etc/redhat-release; then
   echo "[nginx]
 name=nginx repo
-baseurl=http://nginx.org/packages/rhel/6/\$basearch/
+baseurl=http://nginx.org/packages/rhel/$MAJORVERS/\$basearch/
 gpgcheck=0
 enabled=1" > /etc/yum.repos.d/nginx.repo
 else echo "[nginx]
 name=nginx repo
-baseurl=http://nginx.org/packages/centos/6/\$basearch/
+baseurl=http://nginx.org/packages/centos/$MAJORVERS/\$basearch/
 gpgcheck=0
 enabled=1"  > /etc/yum.repos.d/nginx.repo
 fi
