@@ -6,3 +6,8 @@
 ###### keyinject-web.sh
 * Execute on the web heads to pull down the public key from S3.
 * Public key is installed for user "magento".
+
+###### lsync-elbpoll.sh
+* To be run as a cronjob on the admin server after keyinject tasks have run.
+* Sets up lsyncd.
+* Reconfigures lsyncd if web heads behind ELB change.
