@@ -12,6 +12,7 @@ if [ ! -d ~magento/.ssh/ ];
 then
   mkdir ~magento/.ssh/
   chown magento:magento ~magento/.ssh/
+  restorecon -R `getent passwd magento | cut -d: -f6`/.ssh/
 fi
 
 region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/ | sed '$ s/.$//'`
@@ -30,4 +31,5 @@ then
   cat ~magento/.ssh/magento-admin.pub >> ~magento/.ssh/authorized_keys
   rm -f ~magento/.ssh/magento-admin.pub
   chown magento:magento ~magento/.ssh/magento-admin.pub ~magento/.ssh/authorized_keys
+  restorecon -R `getent passwd magento | cut -d: -f6`/.ssh/
 fi
