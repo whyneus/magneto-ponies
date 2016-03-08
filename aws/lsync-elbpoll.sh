@@ -55,6 +55,7 @@ then
   systemctl enable lsyncd.service
   sysctl -w fs.inotify.max_user_watches=163840 >> /etc/sysctl.conf
   sysctl -p
+  mkdir /var/log/lsyncd
   
   echo "settings {
   logfile    = \"/var/log/lsyncd/lsyncd.log\",
