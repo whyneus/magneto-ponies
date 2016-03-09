@@ -36,3 +36,14 @@ else
   chown magento:magento `getent passwd magento | cut -d: -f6`/.ssh/magento-admin
   cp -av `getent passwd magento | cut -d: -f6`/.ssh/magento-admin `getent passwd magento | cut -d: -f6`/.ssh/id_rsa
 fi
+
+if [ ! -f /opt/rackspace/lsyncd-elbpoll.sh ]
+then
+  mkdir /opt/rackspace
+  curl -so /opt/rackspace/lsyncd-elbpoll.sh https://raw.githubusercontent.com/whyneus/magneto-ponies/master/aws/lsyncd-elbpoll.sh
+fi
+
+if [ ! -f /etc/cron.d/lsyncd ]
+then
+  echo "*/5 * * * * root /bin/bash /opt/rackspace/lsyncd-elbpoll.sh" >> /etc/cron.d/lsyncd
+fi
