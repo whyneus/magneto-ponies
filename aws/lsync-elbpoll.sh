@@ -56,6 +56,17 @@ then
   sysctl -w fs.inotify.max_user_watches=163840 >> /etc/sysctl.conf
   sysctl -p
   mkdir /var/log/lsyncd
+  chown magento:magento /var/log/lsync/
+  sed '/ExecStart/aUser=magento' /usr/lib/systemd/system/lsyncd.service
+  systemctl daemon-reload
+  
+  yumexclude=`grep ^exclude /etc/yum.conf`
+  if [[ -z ${yumexclude} ]]
+  then
+    echo "exclude=lsyncd" >> /etc/yum.conf
+  else
+    sed -i '/^exclude/s/$/ lsyncd/' /etc/yum.conf
+  fi
   
   echo "settings {
   logfile    = \"/var/log/lsyncd/lsyncd.log\",
