@@ -56,7 +56,7 @@ then
   sysctl -w fs.inotify.max_user_watches=163840 >> /etc/sysctl.conf
   sysctl -p
   mkdir /var/log/lsyncd
-  chown magento:magento /var/log/lsync/
+  chown magento:magento /var/log/lsyncd/
   sed '/ExecStart/aUser=magento' /usr/lib/systemd/system/lsyncd.service
   systemctl daemon-reload
   
