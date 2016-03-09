@@ -8,10 +8,10 @@
 #   AmazonS3ReadOnlyAccess
 #   AmazonEC2ReadOnlyAccess
 
-if [ ! -d ~magento/.ssh/ ];
+if [ ! -d `getent passwd magento | cut -d: -f6`/.ssh/ ];
 then
-  mkdir ~magento/.ssh/
-  chown magento:magento ~magento/.ssh/
+  mkdir `getent passwd magento | cut -d: -f6`/.ssh/
+  chown magento:magento `getent passwd magento | cut -d: -f6`/.ssh/
   restorecon -R `getent passwd magento | cut -d: -f6`/.ssh/
 fi
 
@@ -28,8 +28,8 @@ done
 if [ ! -z ${keybucket} ]
 then
   /bin/aws s3 cp s3://${keybucket}-lsynckey/magento-admin.pub `getent passwd magento | cut -d: -f6`/.ssh/
-  cat ~magento/.ssh/magento-admin.pub >> ~magento/.ssh/authorized_keys
-  rm -f ~magento/.ssh/magento-admin.pub
-  chown magento:magento ~magento/.ssh/magento-admin.pub ~magento/.ssh/authorized_keys
+  cat `getent passwd magento | cut -d: -f6`/.ssh/magento-admin.pub >> `getent passwd magento | cut -d: -f6`/.ssh/authorized_keys
+  rm -f `getent passwd magento | cut -d: -f6`/.ssh/magento-admin.pub
+  chown magento:magento `getent passwd magento | cut -d: -f6`/.ssh/magento-admin.pub `getent passwd magento | cut -d: -f6`/.ssh/authorized_keys
   restorecon -R `getent passwd magento | cut -d: -f6`/.ssh/
 fi
