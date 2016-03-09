@@ -8,10 +8,10 @@
 #   AmazonS3FullAccess
 #   AmazonEC2ReadOnlyAccess
 
-if [ ! -d ~magento/.ssh/ ];
+if [ ! -d `getent passwd magento | cut -d: -f6`/.ssh/ ];
 then
-  mkdir ~magento/.ssh/
-  chown magento:magento ~magento/.ssh/
+  mkdir `getent passwd magento | cut -d: -f6`/.ssh/
+  chown magento:magento `getent passwd magento | cut -d: -f6`/.ssh/
 fi
 
 region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/ | sed '$ s/.$//'`
@@ -21,16 +21,18 @@ bucketexist=`/bin/aws s3 ls | grep -c "${keybucket}"`
 
 if [ ${bucketexist} != "1" ];
 then
-  if [ ! -f ~magento/.ssh/magento-admin ];
+  if [ ! -f `getent passwd magento | cut -d: -f6`/.ssh/magento-admin ];
   then
-    ssh-keygen -t rsa -C magento-admin -b 4096 -f ~magento/.ssh/magento-admin -q -N ""
-    chown magento:magento ~magento/.ssh/magento-admin*
+    ssh-keygen -t rsa -C magento-admin -b 4096 -f `getent passwd magento | cut -d: -f6`/.ssh/magento-admin -q -N ""
+    chown magento:magento `getent passwd magento | cut -d: -f6`/.ssh/magento-admin*
+    cp -av `getent passwd magento | cut -d: -f6`/.ssh/magento-admin `getent passwd magento | cut -d: -f6`/.ssh/id_rsa
   fi
   /bin/aws s3 mb s3://${keybucket}-lsynckey/
   /bin/aws s3api put-bucket-tagging --bucket ${keybucket}-lsynckey --tagging "TagSet=[{Key=rackuuid,Value=${keybucket}}]"
   /bin/aws s3 cp --sse AES256 "`getent passwd magento | cut -d: -f6`/.ssh/" s3://${keybucket}-lsynckey/ --recursive --include "magento-admin*"
 else
   /bin/aws s3 cp s3://${keybucket}-lsynckey/magento-admin `getent passwd magento | cut -d: -f6`/.ssh/
-  chmod 600 ~magento/.ssh/magento-admin
-  chown magento:magento ~magento/.ssh/magento-admin
+  chmod 600 `getent passwd magento | cut -d: -f6`/.ssh/magento-admin
+  chown magento:magento `getent passwd magento | cut -d: -f6`/.ssh/magento-admin
+  cp -av `getent passwd magento | cut -d: -f6`/.ssh/magento-admin `getent passwd magento | cut -d: -f6`/.ssh/id_rsa
 fi
