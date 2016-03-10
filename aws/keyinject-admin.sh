@@ -47,3 +47,8 @@ if [ ! -f /etc/cron.d/lsyncd ]
 then
   echo "*/5 * * * * root /bin/bash /opt/rackspace/lsyncd-elbpoll.sh" >> /etc/cron.d/lsyncd
 fi
+
+if [ -f /usr/local/bin/n98-magerun ]
+then
+  /usr/local/bin/n98-magerun self-update
+fi
