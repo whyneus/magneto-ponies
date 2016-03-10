@@ -3,42 +3,52 @@
 # Based on list in /tmp/awsec2webips which will be populated separately.
 
 
-VARNISHADMPORT=6082
+AWSEC2WEBIPs="/tmp/awsec2webips"
 
-DOCROOT="$(getent passwd magento | cut -d: -f6)/httpdocs"
+# Use list file $AWSEC2WEBIPs
+if [ ! -f $AWSEC2WEBIPs ];
+then
+  touch $AWSEC2WEBIPs
+fi
+
+webipchange=`diff $AWSEC2WEBIPs /tmp/varnish-servers`
+if [[ -z ${webipchange} ]]; then
+  # No change 
+  echo "No change. "
+  exit 0
+fi
+
+#DOCROOT="$(getent passwd magento | cut -d: -f6)/httpdocs"
+DOCROOT="/var/www/html/magento"
 N98MAGERUN="/usr/local/bin/n98-magerun.phar --root-dir=$DOCROOT "
 
 
 PHOENIX=$($N98MAGERUN dev:module:list --status active | grep Phoenix_VarnishCache)
-NEXCESS=$($N98MAGERUN dev:module:list --status active | grep Nexcessnet_Turpentine)
+TURPENTINE=$($N98MAGERUN dev:module:list --status active | grep Nexcessnet_Turpentine)
 
-# Incomment for custom implementations
+# Uncomment for custom implementations
 # $CUSTOMCONFIGPATH="module/config/path"
 
-# Use list in /tmp/serverlist for now
-if [ ! -f /tmp/awsvarniships ];
-then
-  touch /tmp/awsvarniships
-fi
 
-webipchange=`diff /tmp/awsec2webips /tmp/awsvarniships`
-if [[ ! -z ${webipchange} ]];
-then
-
-  if [[ $PHOENIX ]]
+  if [[ $PHOENIX ]]; then
     # Phoenix needs a semicolon-separated list
-    CONFIGVALUE=$(cat /tmp/awsec2webips)
-    $N98MAGERUN config:set varnishcache/general/servers $CONFIGVALUE
+    DELIMITER=";"
+    CONFIGVALUE=$(cat $AWSEC2WEBIPs | sed -e "s/\s/${DELIMITER}/g")
+    echo $CONFIGVALUE
+    $N98MAGERUN config:set varnishcache/general/servers "$CONFIGVALUE"
   fi
   
-  if [[ $TURPENTINE ]]
+  if [[ $TURPENTINE ]]; then
     # Turpentine uses a newline-separated list with ports a semicolon-separated list
-    CONFIGVALUE=$(cat /tmp/awsec2webips)
-    $N98MAGERUN config:set turpentine_varnish/servers/server_list $CONFIGVALUE
+    VARNISHADMPORT=6082
+    DELIMITER=":${VARNISHADMPORT}\n"
+    CONFIGVALUE=$(cat $AWSEC2WEBIPs | sed -e "s/\s/${DELIMITER}/g")
+    $N98MAGERUN config:set turpentine_varnish/servers/server_list "$CONFIGVALUE"
   fi
   
-  if [[ $CUSTOMCONFIGPATH ]]
-    CONFIGVALUE=$(cat /tmp/awsec2webips) # modify as appropriate
+  if [[ $CUSTOMCONFIGPATH ]]; then
+    DELIMITER=","
+    CONFIGVALUE=$(cat $AWSEC2WEBIPs | sed -e "s/\s/{DELIMITER}/g") # modify as appropriate
     $N98MAGERUN config:set $CUSTOMCONFIGPATH $CONFIGVALUE
   fi 
 
@@ -46,7 +56,5 @@ then
   n98-magerun.phar --root-dir=$DOCROOT cache:clean config
   
   # Copy the current list for comparison next time
-  /bin/cp -f /tmp/awsec2webips /tmp/awsvarniships
-fi
+  /bin/cp -f $AWSEC2WEBIPs /tmp/varnish-servers
 
-# work in progress.....
