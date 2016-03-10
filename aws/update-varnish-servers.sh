@@ -3,7 +3,7 @@
 # Based on list in /tmp/awsec2webips which will be populated separately.
 
 
-VARNISHADMPORT=6062
+VARNISHADMPORT=6082
 
 DOCROOT="$(getent passwd magento | cut -d: -f6)/httpdocs"
 N98MAGERUN="/usr/local/bin/n98-magerun.phar --root-dir=$DOCROOT "
@@ -39,7 +39,7 @@ then
   
   if [[ $CUSTOMCONFIGPATH ]]
     CONFIGVALUE=$(cat /tmp/awsec2webips) # modify as appropriate
-    $N98MAGERUN config:set turpentine_varnish/servers/server_list $CONFIGVALUE
+    $N98MAGERUN config:set $CUSTOMCONFIGPATH $CONFIGVALUE
   fi 
 
   # Clear the config cache
