@@ -18,8 +18,8 @@ if [[ -z ${webipchange} ]]; then
   exit 0
 fi
 
-#DOCROOT="$(getent passwd magento | cut -d: -f6)/httpdocs"
-DOCROOT="/var/www/html/magento"
+DOCROOT="$(getent passwd magento | cut -d: -f6)/httpdocs"
+#DOCROOT="/var/www/html/magento"
 N98MAGERUN="/usr/local/bin/n98-magerun.phar --root-dir=$DOCROOT "
 
 
