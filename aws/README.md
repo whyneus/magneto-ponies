@@ -11,3 +11,7 @@
 * To be run as a cronjob on the admin server after keyinject tasks have run.
 * Sets up lsyncd.
 * Reconfigures lsyncd if web heads behind ELB change.
+
+###### media-setup.sh
+* Execute on the admin node to create S3 bucket to house media/ content.
+* If S3 bucket already exists, copy all content to load disk.
