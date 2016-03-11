@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Script to setup S3 bucket for Magento's media/ (initial creation) or copy
-# data onto local server if the bucket exists (healing process).
+# The following tags are required:
+#   rackuuid - all resources related to the deployment should have the same tag
+#              (eg. example.com-20160301)
 
 # The following IAM roles are required:
 #   AmazonS3FullAccess
