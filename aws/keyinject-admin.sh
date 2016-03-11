@@ -17,7 +17,7 @@ fi
 region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/ | sed '$ s/.$//'`
 uuid=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
 keybucket=`/bin/aws ec2 describe-tags --region ${region} --filters "Name=resource-id,Values=${uuid}" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`
-bucketexist=`/bin/aws s3 ls | grep -c "${keybucket}"`
+bucketexist=`/bin/aws s3 ls | grep -c "${keybucket}-lsynckey"`
 
 if [ ${bucketexist} != "1" ];
 then
