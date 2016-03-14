@@ -8,16 +8,17 @@
 #   AmazonS3ReadOnlyAccess
 #   AmazonEC2ReadOnlyAccess
 
-if [ ! -d `getent passwd magento | cut -d: -f6`/.ssh/ ];
-then
-  mkdir `getent passwd magento | cut -d: -f6`/.ssh/
-  chown magento:magento `getent passwd magento | cut -d: -f6`/.ssh/
-  restorecon -R `getent passwd magento | cut -d: -f6`/.ssh/
-fi
-
 region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/ | sed '$ s/.$//'`
 uuid=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
 keybucket=`/bin/aws ec2 describe-tags --region ${region} --filters "Name=resource-id,Values=${uuid}" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`
+home=`getent passwd magento | cut -d: -f6`
+
+if [ ! -d ${home}/.ssh/ ];
+then
+  mkdir ${home}/.ssh/
+  chown magento:magento ${home}/.ssh/
+  restorecon -R ${home}/.ssh/
+fi
 
 while [ -z ${bucketexist} ]
 do
@@ -27,9 +28,9 @@ done
 
 if [ ! -z ${keybucket} ]
 then
-  /bin/aws s3 cp s3://${keybucket}-lsynckey/magento-admin.pub `getent passwd magento | cut -d: -f6`/.ssh/
-  cat `getent passwd magento | cut -d: -f6`/.ssh/magento-admin.pub >> `getent passwd magento | cut -d: -f6`/.ssh/authorized_keys
-  rm -f `getent passwd magento | cut -d: -f6`/.ssh/magento-admin.pub
-  chown magento:magento `getent passwd magento | cut -d: -f6`/.ssh/magento-admin.pub `getent passwd magento | cut -d: -f6`/.ssh/authorized_keys
-  restorecon -R `getent passwd magento | cut -d: -f6`/.ssh/
+  /bin/aws s3 cp s3://${keybucket}-lsynckey/magento-admin.pub ${home}/.ssh/
+  cat ${home}/.ssh/magento-admin.pub >> ${home}/.ssh/authorized_keys
+  rm -f ${home}/.ssh/magento-admin.pub
+  chown magento:magento ${home}/.ssh/magento-admin.pub ${home}/.ssh/authorized_keys
+  restorecon -R ${home}/.ssh/
 fi
