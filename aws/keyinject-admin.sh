@@ -28,7 +28,7 @@ then
     chown magento:magento ${home}/.ssh/magento-admin*
     cp -av ${home}/.ssh/magento-admin ${home}/.ssh/id_rsa
   fi
-  /bin/aws s3 mb s3://${keybucket}-lsynckey/
+  /bin/aws s3 mb s3://${keybucket}-lsynckey/ --region ${region}
   /bin/aws s3api put-bucket-tagging --bucket ${keybucket}-lsynckey --tagging "TagSet=[{Key=rackuuid,Value=${keybucket}}]"
   /bin/aws s3 cp --sse AES256 "${home}/.ssh/" s3://${keybucket}-lsynckey/ --recursive --include "magento-admin*"
 else
