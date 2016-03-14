@@ -26,11 +26,11 @@ then
   then
     ssh-keygen -t rsa -C magento-admin -b 4096 -f ${home}/.ssh/magento-admin -q -N ""
     chown magento:magento ${home}/.ssh/magento-admin*
-    cp -av ${home}/.ssh/magento-admin ${home}/.ssh/id_rsa
   fi
   /bin/aws s3 mb s3://${keybucket}-lsynckey/ --region ${region}
   /bin/aws s3api put-bucket-tagging --bucket ${keybucket}-lsynckey --tagging "TagSet=[{Key=rackuuid,Value=${keybucket}}]"
   /bin/aws s3 cp --sse AES256 "${home}/.ssh/" s3://${keybucket}-lsynckey/ --recursive --include "magento-admin*"
+  cp -av ${home}/.ssh/magento-admin ${home}/.ssh/id_rsa
 else
   /bin/aws s3 cp s3://${keybucket}-lsynckey/magento-admin ${home}/.ssh/
   chmod 600 ${home}/.ssh/magento-admin
