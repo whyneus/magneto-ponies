@@ -1,27 +1,26 @@
 #!/bin/bash
 
-# The following tags are required:
-#   rackuuid - all resources related to the deployment should have the same tag
-#              (eg. example.com-20160301)
-
 # The following IAM roles are required:
 #   AmazonS3FullAccess
 #   AmazonEC2ReadOnlyAccess
 
+user="magento"
 region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/ | sed '$ s/.$//'`
 uuid=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
 mediabucket="`/bin/aws ec2 describe-tags --region ${region} --filters "Name=resource-id,Values=${uuid}" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`"
 bucketexist=`/bin/aws s3 ls | grep -c "${mediabucket}-media"`
+home=`getent passwd ${user} | cut -d: -f6`
 
-if [ ! -d `getent passwd magento | cut -d: -f6`/httpdocs/media ]
+if [ ! -d ${home}/httpdocs/media ]
 then
-  mkdir `getent passwd magento | cut -d: -f6`/httpdocs/media
+  mkdir ${home}/httpdocs/media
 fi
 
 if [ ${bucketexist} != "1" ];
 then
-  /bin/aws s3 mb s3://${mediabucket}-media/
+  /bin/aws s3 mb s3://${mediabucket}-media/ --region ${region}
   /bin/aws s3api put-bucket-tagging --bucket ${mediabucket}-media --tagging "TagSet=[{Key=rackuuid,Value=${mediabucket}}]"
 else
-#  /bin/aws s3 cp
+  /bin/aws s3 sync s3://${mediabucket}-media/ ${home}/httpdocs/media/ --delete
+  chown -R ${user}:${user} ${home}/httpdocs/media
 fi
