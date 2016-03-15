@@ -76,6 +76,7 @@ then
 }
 
 dofile(\"/etc/lsyncd-targets\")
+dofile(\"/etc/lsyncd-s3\")
 
 for _, server in ipairs(servers) do
 sync {
