@@ -23,18 +23,18 @@ then
   /bin/aws s3 mb s3://${mediabucket}-media/ --region ${region}
   /bin/aws s3api put-bucket-tagging --bucket ${mediabucket}-media --tagging "TagSet=[{Key=rackuuid,Value=${mediabucket}}]"
 else
-  /bin/aws s3 sync s3://${mediabucket}-media/ ${home}/httpdocs/media/ --delete --quiet
+  /bin/aws s3 sync s3://${mediabucket}-media/ ${home}/httpdocs/media/ --delete --quiet --region ${region}
   chown -R ${user}:${user} ${home}/httpdocs/media
 fi
 
 # Create lsyncd S3 configuration for later use
 echo "s3sync = {
     maxProcesses = 1,
-    onStartup = \"aws s3 sync ^source ^target\",
-    onCreate  = \"aws s3 cp ^source^pathname ^target^pathname || true\",
-    onModify  = \"aws s3 cp ^source^pathname ^target^pathname || true\",
-    onDelete  = \"aws s3 rm ^target^pathname || true\",
-    onMove    = \"aws s3 mv ^target^o.pathname ^target^d.pathname\",
+    onStartup = \"aws s3 sync ^source ^target --region ${region}\",
+    onCreate  = \"aws s3 cp ^source^pathname ^target^pathname --region ${region} || true\",
+    onModify  = \"aws s3 cp ^source^pathname ^target^pathname --region ${region} || true\",
+    onDelete  = \"aws s3 rm ^target^pathname --region ${region} || true\",
+    onMove    = \"aws s3 mv ^target^o.pathname ^target^d.pathname --region ${region}\",
 }
 
 sync {
