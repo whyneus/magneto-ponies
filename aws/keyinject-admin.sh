@@ -38,6 +38,9 @@ else
   cp -av ${home}/.ssh/magento-admin ${home}/.ssh/id_rsa
 fi
 
+# Pull down the script to set up the media/ directory
+/bin/bash <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/aws/media-setup.sh)
+
 if [ ! -f /opt/rackspace/lsyncd-elbpoll.sh ]
 then
   mkdir /opt/rackspace
