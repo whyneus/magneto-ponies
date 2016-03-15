@@ -12,11 +12,12 @@ if [ "$EUID" -ne 0 ]
   exit 1
 fi
 
-#MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-#if [[ "$MAJORVERS"  != "6" ]] | [[ "$MAJORVERS"  != "7" ]]; then
-#    echo "This script is for RHEL/CentOS 6 or 7 only."
-#    exit 1
-#fi 
+MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
+if [ "$MAJORVERS"  != 6 ]; then
+   echo "This script is for CentOS 6 / RHEL 6  only."
+   exit 1
+fi
+echo "RHEL/CentOS 6 Confirmed."
 
 
 ## Environment check - Cloud or Dedicated?
@@ -65,9 +66,9 @@ else
       exit 1
   else
       # Cloud server - install IUS from repo
-      iusrelease=$(curl -s http://dl.iuscommunity.org/pub/ius/stable/CentOS/$MAJORVERS/x86_64/ | egrep -o 'href="ius-release.*rpm"' | cut -d'"' -f2)
+      iusrelease=$(curl -s http://dl.iuscommunity.org/pub/ius/stable/CentOS/6/x86_64/ | grep ius-release | cut -d'"' -f8)
       echo " - installing ius-release..."
-      yum -q -y install http://dl.iuscommunity.org/pub/ius/stable/CentOS/$MAJORVERS/x86_64/$iusrelease      
+      yum -q -y install http://dl.iuscommunity.org/pub/ius/stable/CentOS/6/x86_64/$iusrelease      
       rpm --import /etc/pki/rpm-gpg/IUS-COMMUNITY-GPG-KEY
   fi
 fi
@@ -80,45 +81,24 @@ then
   exit 1
 fi
 
-MAGENTO2=false
 
 
-echo -e "\n\nWhich Major Magento version is to be used?"
+echo -e "\n\nWhich PHP version should be installed?
+NB: Check compatibility of your Magento version."
 
-	echo "Valid options:
-	   1 - Magento 1.x
-	   2 - Magento 2.x
+while true; do
+  echo "Valid options:
+   5.3 - for legacy versions only. 
+   5.4 - for Magneto CE 1.6.x / EE 1.11.x  and newer (with patch)
+   5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer  
 "
-	read MAJORMAGENTO
+  read PHPVERS
 
-	if [[ $MAJORMAGENTO == "2" ]]; then
-	    MAGENTO2=true
-	    PHPVERS="7.0"
-	else
-	   if [[ $MAJORVERS == 7 ]]; then 
-	      # Stick to the vendor-supported PHP 5.4 for now. 
-	      PHPVERS="base"
-	   else
-	           # For CentOS 6, ask which to install (if not set in a parent script)
-		   if [[ -z "$PHPVERS" ]]; then
-
-		      echo -e "\n\nWhich PHP version should be installed?
-			    NB: Check compatibility of your Magento version."
-		      while true; do
-			 echo "Valid options:
-				   5.3 - for legacy versions only. 
-				   5.4 - for Magento CE 1.6.x / EE 1.11.x  and newer (with patch)
-				   5.5 - for Magento CE 1.9.1 / EE 1.14.1 and newer
-	"
-			 read PHPVERS 
-			 if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]  || [[ $PHPVERS == "7.0" ]];  then
-			    break
-			 fi
-		      done
-	            fi
-          fi
-       fi
-
+  if [[ $PHPVERS == "5.5" ]] || [[ $PHPVERS == "5.4" ]]  || [[ $PHPVERS == "5.3" ]]
+  then
+    break
+  fi
+done
 
 
 echo -ne "\n\nPrimary website domain name (not including \"www\.\"): "
@@ -188,14 +168,6 @@ echo -e "\n\n\n\n-------------------------\n\nSANITY CHECK:
 
 NB: if PHP is already installed, this script will remove all config and replace with $PHPVERS optimised for Magento.)
 "
-if [[ $MAGENTO2 == true ]]; then
-  echo "  Magento 2: Yes (Varnish will aslo be installed)"
-else
-  if [[ "$PHPVERS" == "base" ]]; then 
-     echo "For EL 7, we will use the long-life base PHP version, which is PHP 5.4."
-  fi
-fi
-
 
 if [[ $DBSERVER == 1 ]]; then
   echo "
@@ -250,13 +222,12 @@ else
   NEWUSER=1
 fi
 
+# All PHP=FPM config moved to separate script
+. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-php-fpm.sh)
+
 
 
 # Web server config
-
-if [[ $MAGENTO2 == true ]]; then
-  PORTSUFFIX=80
-fi
 
 if [[ $WEBSERVER == "nginx" ]]; then
 . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-nginx.sh)
@@ -265,24 +236,9 @@ else
   . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-apache.sh)
 fi 
 
+
 # Redis install - separate module
 . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-redis.sh)
-
-
-# All PHP=FPM config moved to separate script
-. <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-php-fpm.sh)
-
-if [[ $MAGENTO2 == true ]]; then
-  echo "Setting up Varnish 4.0 ..."
-  . <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento2-varnish.sh)
-  echo "Setting up Comoser ..."
-  curl -sS https://getcomposer.org/installer | sudo php -d "allow_url_fopen=1" -- --install-dir=/usr/local/bin --filename=composer
-else
-  echo "Setting up n98-magerun"
-  wget https://files.magerun.net/n98-magerun.phar -O /usr/local/bin/n98-magerun.phar
-  chmod +x /usr/local/bin/n98-magerun.phar
-  ln -s /usr/local/bin/n98-magerun.phar /usr/local/bin/n98-magerun
-fi
 
 
 
@@ -321,26 +277,12 @@ then
   PREPDIRREUSE="0"
   PREPDIR="/home/rack/magentodbsetup-`date +%Y%m%d`_`/bin/date +%H%M`"
   echo -e "\nCreating prep directory.\nOur working directory will be ${PREPDIR}."
-  mkdir -p $PREPDIR
+  mkdir $PREPDIR
 else
   PREPDIRREUSE="1"
   PREPDIR="/home/rack/${PREPDIRCHECK}"
   echo -e "\nPrevious prep directory detected.\nReusing ${PREPDIR}."
 fi
-
-if [[ -f /etc/my.cnf ]] && [[ -f ${PREPDIR}/my.cnf.new ]]
-then
-  MY1=`md5sum /etc/my.cnf | awk '{print $1}'`
-  MY2=`md5sum ${PREPDIR}/my.cnf.new | awk '{print $1}'`
-  if [[ "$MY1" != "$MY2" ]]
-  then
-    MYSQLRECONFIG=1
-    NEEDSSECUREINSTALL=0
-  fi
-else
-  NEEDSSECUREINSTALL=1
-fi
-
 
 echo "[mysqld]
 
@@ -439,13 +381,12 @@ log-error                            = /var/log/mysqld.log
 open-files-limit                     = 65535
 
 [mysql]
-no-auto-rehash" > $PREPDIR/my.cnf.new
+no-auto-rehash" > /etc/my.cnf
 
-
-MYSQLVERSION=`mysqladmin version | grep Server | awk '{print $3}'`
-MYSQLRPM=`rpm -qa | egrep 'mysql55-server|mariadb-server-5.5'`
-if [[ -z $MYSQLRPM ]]
-then
+MYSQLVERSION=`mysqladmin version 2>/dev/null | grep Server | awk '{print $3}'`
+MYSQLRPM=`rpm -qa | grep mysql.*-server`
+# If MySQL is installed but it isn't 5.5 or 5.6MYSQLRPM=`rpm -qa | grep mysql.*-server
+if [[ ! -z $MYSQLRPM ]] && grep -v mysql5[56]-server <<< $MYSQLRPM; then
   echo -e "\nUpdating MySQL ${MYSQLVERSION} to latest 5.5."
   yum -q -y install yum-plugin-replace
   yum -q -y replace mysql-server --replace-with mysql55-server
@@ -455,49 +396,21 @@ then
   /etc/init.d/mysqld restart
   chkconfig mysqld on
   echo -e "\nDone."
-else
-  echo -e "\n${MYSQLRPM} appears to already be installed.\nContinuing..."
 fi
 
-echo -e "Moving to Percona 5.6."
-
-if [[ $MAJORVERS == "6" ]]; then
-   /etc/init.d/mysqld stop
-   rpm -e --nodeps mysql55 mysql55-libs mysql55-server
-fi
-
-if [[ $MAJORVERS == "7" ]]; then
-   /bin/systemctl stop mariadb.service
-   rpm -e --nodeps mariadb mariadb-server mariadb-libs
-fi
-
-
-yum -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm
-
-yum -y install Percona-Server-server-56 Percona-Server-client-56 Percona-Server-shared-56
-
-if [[ -f /etc/my.cnf ]]; then 
-  mv /etc/my.cnf ${PREPDIR}/my.cnf.backup
-fi
+echo -e "Installing Percona 5.6."
+yum -q -y install http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm
+/etc/init.d/mysqld stop 2>/dev/null
+rpm -e --nodeps mysql55 mysql55-libs mysql55-server 2>/dev/null
+yum -q -y install Percona-Server-server-56 Percona-Server-client-56 Percona-Server-shared-56
 cp -af ${PREPDIR}/my.cnf.new /etc/my.cnf
 mkdir /var/lib/mysqltmp
 mkdir /var/lib/mysqllogs
 chmod 1770 /var/lib/mysqltmp
 chown mysql:mysql /var/lib/mysqltmp
 chown mysql:mysql /var/lib/mysqllogs
-
-if [[ $MAJORVERS == "6" ]]; then
-   /etc/init.d/mysql start
-   chkconfig mysql on
-fi
-
-if [[ $MAJORVERS == "7" ]]; then
-   /bin/systemctl start mysql.service
-   /bin/systemctl enable  mysql.service
-
-fi
-
-
+chkconfig mysql on
+/etc/init.d/mysql start
 /usr/bin/mysql_upgrade
 mysql -e "CREATE FUNCTION fnv1a_64 RETURNS INTEGER SONAME 'libfnv1a_udf.so'"
 mysql -e "CREATE FUNCTION fnv_64 RETURNS INTEGER SONAME 'libfnv_udf.so'"
@@ -512,9 +425,7 @@ then
   mysql -uroot -e "DROP DATABASE test"
   mysql -uroot -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\_%'"
   mysql -uroot -e "UPDATE mysql.user SET Password=PASSWORD('${MYSQLROOTPASS}') WHERE User='root'"
- 
-  service mysql restart
-  
+
   echo "[client]
 user=root
 password=${MYSQLROOTPASS}" > /root/.my.cnf
@@ -523,6 +434,7 @@ password=${MYSQLROOTPASS}" > /root/.my.cnf
     MYSQLROOTPASS=$(grep root /root/.my.cnf | cut -d"=" -f2)
 fi
 
+/etc/init.d/mysql restart
 
 if [[ ! -z ${DBNAME} ]]
 then
@@ -536,7 +448,7 @@ fi
 
 ## Backups
 
-if [[ $ENVIRONMENT == "DEDICATED" ]]; then
+if [[ ENVIRONMENT == "DEDICATED" ]]; then
   yum -y -q install rs-holland-backup
   echo -e "\n\nHolland MySQL backup installed - ensure Rackspace MySQL backups are configured."
 else
@@ -581,7 +493,7 @@ file-per-database = yes
 #level = 1
 #[mysql:client]
 #defaults-extra-file = /root/.my.cnf
-" > /etc/holland/backupsets/default.conf
+" >> /etc/holland/backupsets/default.conf
 
 
 echo "#! /bin/bash
@@ -608,21 +520,11 @@ fi
 
 
 
-## Memcached config, for good measure
-
-if [[ $MAJORVERS == "6" ]]; then
-   /etc/init.d/memcached restart
-   chkconfig memcached on
-fi
-
-if [[ $MAJORVERS == "7" ]]; then
-   /bin/systemctl start  memcached.service
-   /bin/systemctl enable  memcached.service
-fi
-
-
-
-
+## Service config, for good measure
+for service in php-fpm httpd redis memcached mysql; do
+   chkconfig $service on
+   service $service restart
+done
 
 ## iptables for Cloud servers
 if [[ $ENVIRONMENT == "CLOUD" ]]; then
