@@ -14,6 +14,7 @@ home=`getent passwd ${user} | cut -d: -f6`
 if [ ! -d ${home}/httpdocs/media ]
 then
   mkdir ${home}/httpdocs/media
+  chown -R ${user}:${user} ${home}/httpdocs/media
 fi
 
 # Create bucket if non-existent or pull down all files from it
