@@ -16,6 +16,7 @@ then
   mkdir ${home}/httpdocs/media
 fi
 
+# Create bucket if non-existent or pull down all files from it
 if [ ${bucketexist} != "1" ];
 then
   /bin/aws s3 mb s3://${mediabucket}-media/ --region ${region}
@@ -24,3 +25,19 @@ else
   /bin/aws s3 sync s3://${mediabucket}-media/ ${home}/httpdocs/media/ --delete --quiet
   chown -R ${user}:${user} ${home}/httpdocs/media
 fi
+
+# Create lsyncd S3 configuration for later use
+echo "s3sync = {
+    maxProcesses = 1,
+    onStartup = \"aws s3 sync ^source ^target\",
+    onCreate  = \"aws s3 cp ^source^pathname ^target^pathname || true\",
+    onModify  = \"aws s3 cp ^source^pathname ^target^pathname || true\",
+    onDelete  = \"aws s3 rm ^target^pathname || true\",
+    onMove    = \"aws s3 mv ^target^o.pathname ^target^d.pathname\",
+}
+
+sync {
+    s3sync,
+    source = \"${home}/httpdocs/media\",
+    target = \"s3://${mediabucket}-media\",
+}" >> /etc/lsyncd-s3
