@@ -22,13 +22,13 @@ fi
 
 while [ -z ${bucketexist} ]
 do
-  bucketexist=`/bin/aws s3 ls | grep "${keybucket}\-lsynckey"`
+  bucketexist=`/bin/aws s3 ls --region ${region} | grep "${keybucket}\-lsynckey"`
   sleep 5
 done
 
 if [ ! -z ${keybucket} ]
 then
-  /bin/aws s3 cp s3://${keybucket}-lsynckey/magento-admin.pub ${home}/.ssh/
+  /bin/aws s3 cp s3://${keybucket}-lsynckey/magento-admin.pub ${home}/.ssh/ --region ${region}
   cat ${home}/.ssh/magento-admin.pub >> ${home}/.ssh/authorized_keys
   rm -f ${home}/.ssh/magento-admin.pub
   chown magento:magento ${home}/.ssh/magento-admin.pub ${home}/.ssh/authorized_keys
