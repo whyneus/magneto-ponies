@@ -21,6 +21,6 @@ then
   /bin/aws s3 mb s3://${mediabucket}-media/ --region ${region}
   /bin/aws s3api put-bucket-tagging --bucket ${mediabucket}-media --tagging "TagSet=[{Key=rackuuid,Value=${mediabucket}}]"
 else
-  /bin/aws s3 sync s3://${mediabucket}-media/ ${home}/httpdocs/media/ --delete
+  /bin/aws s3 sync s3://${mediabucket}-media/ ${home}/httpdocs/media/ --delete --quiet
   chown -R ${user}:${user} ${home}/httpdocs/media
 fi
