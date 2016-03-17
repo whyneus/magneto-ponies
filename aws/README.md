@@ -1,3 +1,8 @@
+##### Usage
+* Run keyinject-admin.sh on the admin node as root on initial start up.
+* Run keyinject-web.sh on each web node as root on initial start up.
+
+##### Files
 ###### keyinject-admin.sh
 * Execute on the admin node to create a keypair and send to S3.
 * This script executes media-setup.sh.
