@@ -7,7 +7,7 @@
 
 
 
-## Sanity checks - root on RHEL6 or CentOS 6
+## Sanity checks - root on RHEL/CentOS 6 or 7
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -15,11 +15,12 @@ if [ "$EUID" -ne 0 ]
 fi
 
 MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-if [ "$MAJORVERS"  != 6 ]; then
-   echo "This script is for CentOS 6 / RHEL 6  only."
+if [[ "$MAJORVERS"  == "6" ]] || [[ "$MAJORVERS"  == "7" ]]; then
+   echo "RHEL/CentOS $MAJORVERS Confirmed."
+else
+   echo "This script is for RHEL/CentOS 6 or 7 only."
    exit 1
 fi
-echo "RHEL/CentOS 6 Confirmed."
 
 
 
@@ -83,12 +84,12 @@ yum -y remove httpd
 if grep -qi "Red Hat" /etc/redhat-release; then
   echo "[nginx]
 name=nginx repo
-baseurl=http://nginx.org/packages/rhel/6/\$basearch/
+baseurl=http://nginx.org/packages/rhel/$MAJORVERS/\$basearch/
 gpgcheck=0
 enabled=1" > /etc/yum.repos.d/nginx.repo
 else echo "[nginx]
 name=nginx repo
-baseurl=http://nginx.org/packages/centos/6/\$basearch/
+baseurl=http://nginx.org/packages/centos/$MAJORVERS/\$basearch/
 gpgcheck=0
 enabled=1"  > /etc/yum.repos.d/nginx.repo
 fi
@@ -110,7 +111,7 @@ server {
 }
    
 ## Set FPM pool socket for Magento Dashboard, based on adminhtml cookie
-map $http_cookie $phpfpm_socket {
+map \$http_cookie \$phpfpm_socket {
   default unix:/var/run/php-fpm/${DOMAINNAME}.sock;
   ~adminhtml unix:/var/run/php-fpm/${DOMAINNAME}-admin.sock;
 }
@@ -149,7 +150,7 @@ server {
  {
  if (\0041-e \$request_filename) { rewrite / /index.php last; }
  expires off;
- fastcgi_pass $phpfpm_socket;
+ fastcgi_pass \$phpfpm_socket;
  fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
  fastcgi_param MAGE_RUN_CODE default;
  fastcgi_param MAGE_RUN_TYPE store;
@@ -170,5 +171,12 @@ fi
 sed -i s/80/80${PORTSUFFIX}/g /etc/nginx/conf.d/default.conf
 
 
-chkconfig nginx on
-/etc/init.d/nginx start
+if [[ $MAJORVERS == "6" ]]; then
+   /etc/init.d/nginx restart
+   chkconfig php-fpm on
+fi
+
+if [[ $MAJORVERS == "7" ]]; then
+   /bin/systemctl restart  nginx.service
+   /bin/systemctl enable  nginx.service
+fi
