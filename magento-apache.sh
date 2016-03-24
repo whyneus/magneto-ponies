@@ -125,7 +125,7 @@ MAKEINSTALLED=`command -v make`
 echo -e "\nInstalling mod_fastcgi..."
 if [[ ${PREPDIRREUSE}="1" ]]
 then
-  wget -q -P ${PREPDIR} 'http://www.fastcgi.com/dist/mod_fastcgi-SNAP-0910052141.tar.gz'
+  wget -q -P ${PREPDIR} 'https://github.com/whyneus/magneto-ponies/raw/master/mod_fastcgi-SNAP-0910052141.tar.gz'
   tar -zxC ${PREPDIR} -f ${PREPDIR}/mod_fastcgi-SNAP-0910052141.tar.gz
 fi
 if [[ -z ${MODFCGI} ]]
