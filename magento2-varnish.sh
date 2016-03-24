@@ -3,10 +3,13 @@
 
 
 MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-if [[ "$MAJORVERS"  != "6" ]] | [[ "$MAJORVERS"  != "7" ]]; then
-    echo "This script is for RHEL/CentOS 6 or 7 only."
-    exit 1
-fi 
+if [[ "$MAJORVERS"  == "6" ]] || [[ "$MAJORVERS"  == "7" ]]; then
+   echo "RHEL/CentOS $MAJORVERS Confirmed."
+else
+   echo "This script is for RHEL/CentOS 6 or 7 only."
+   exit 1
+fi
+
 
 
 echo -e "\nChecking EPEL repository."
