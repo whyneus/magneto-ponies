@@ -117,7 +117,7 @@ map \$http_cookie \$phpfpm_socket {
 }
 
 server {
- listen 80${PORTSUFFIX};
+ listen 80${PORTSUFFIX} default_server;
  server_name www.$DOMAINNAME media.$DOMAINNAME skin.$DOMAINNAME js.$DOMAINNAME;
  root $DOCROOT;
  
@@ -167,8 +167,12 @@ server {
 " > /etc/nginx/conf.d/$DOMAINNAME.conf
 fi 
 
-# Change port in default.conf
+# Change port in default.conf, in case it's ever used
 sed -i s/80/80${PORTSUFFIX}/g /etc/nginx/conf.d/default.conf
+
+# Remove "default" server
+mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+echo "# default.conf disabled. This file is here to prevent package updates replacing it." > /etc/nginx/conf.d/default.conf
 
 
 if [[ $MAJORVERS == "6" ]]; then
