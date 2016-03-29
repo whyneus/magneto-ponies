@@ -13,8 +13,7 @@ fi
 
 webipchange=`diff $AWSEC2WEBIPs /tmp/varnish-servers`
 if [[ -z ${webipchange} ]]; then
-  # No change 
-  echo "No change. "
+  #  echo "No change. "
   exit 0
 fi
 
@@ -34,12 +33,11 @@ TURPENTINE=$($N98MAGERUN dev:module:list --status active | grep Nexcessnet_Turpe
     # Phoenix needs a semicolon-separated list
     DELIMITER=";"
     CONFIGVALUE=$(cat $AWSEC2WEBIPs | sed -e "s/\s/${DELIMITER}/g")
-    echo $CONFIGVALUE
     $N98MAGERUN config:set varnishcache/general/servers "$CONFIGVALUE"
   fi
   
   if [[ $TURPENTINE ]]; then
-    # Turpentine uses a newline-separated list with ports a semicolon-separated list
+    # Turpentine uses a newline-separated list with ports
     VARNISHADMPORT=6082
     DELIMITER=":${VARNISHADMPORT}\n"
     CONFIGVALUE=$(cat $AWSEC2WEBIPs | sed -e "s/\s/${DELIMITER}/g")
@@ -47,7 +45,7 @@ TURPENTINE=$($N98MAGERUN dev:module:list --status active | grep Nexcessnet_Turpe
   fi
   
   if [[ $CUSTOMCONFIGPATH ]]; then
-    DELIMITER=","
+    DELIMITER="," # Custom - whatever you need
     CONFIGVALUE=$(cat $AWSEC2WEBIPs | sed -e "s/\s/{DELIMITER}/g") # modify as appropriate
     $N98MAGERUN config:set $CUSTOMCONFIGPATH $CONFIGVALUE
   fi 
