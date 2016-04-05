@@ -12,7 +12,7 @@ region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-z
 uuid=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
 keybucket=`/bin/aws ec2 describe-tags --region ${region} --filters "Name=resource-id,Values=${uuid}" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`
 home=`getent passwd magento | cut -d: -f6`
-s3count=`aws s3 ls s3://mage1media/media/ --recursive --summarize | grep ^Total\ Objects | awk '{print $3}'`
+s3count=`/bin/aws s3 ls s3://${keybucket}-media/ --recursive --summarize --region ${region} | grep ^Total\ Objects | awk '{print $3}'`
 
 if [ ! -d ${home}/.ssh/ ];
 then
