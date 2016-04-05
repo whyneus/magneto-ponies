@@ -41,7 +41,7 @@ do
   sleep 30
   localcount=`find /var/www/vhosts/magento/httpdocs/media/ | wc -l`
 done
-if [[ ${localcount} -gt $((${s3count}-20)) ]]
+if [[ ${localcount} -ge $((${s3count}-20)) ]]
 then
   echo "<?php echo \"OK\"; ?>" > /var/www/vhosts/magento/httpdocs/rs-healthc.php
 fi
