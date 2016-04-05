@@ -13,6 +13,7 @@
 ###### keyinject-web.sh
 * Execute on the web heads to pull down the public key from S3.
 * Public key is installed for user "magento".
+* Checks the number of files in local media/ against the number in S3 media bucket and creates rs-healthc.php once the number of local files is within 20 files of S3 bucket.
 
 ###### lsyncd-elbpoll.sh
 * To be run as a cronjob on the admin node after keyinject tasks have run.
