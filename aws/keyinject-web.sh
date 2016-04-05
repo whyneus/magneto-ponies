@@ -12,6 +12,7 @@ region=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-z
 uuid=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
 keybucket=`/bin/aws ec2 describe-tags --region ${region} --filters "Name=resource-id,Values=${uuid}" "Name=key,Values=rackuuid" --query 'Tags[*].Value[]' --output text`
 home=`getent passwd magento | cut -d: -f6`
+s3count=`aws s3 ls s3://mage1media/media/ --recursive --summarize | grep ^Total\ Objects | awk '{print $3}'`
 
 if [ ! -d ${home}/.ssh/ ];
 then
@@ -33,4 +34,14 @@ then
   rm -f ${home}/.ssh/magento-admin.pub
   chown magento:magento ${home}/.ssh/magento-admin.pub ${home}/.ssh/authorized_keys
   restorecon -R ${home}/.ssh/
+fi
+
+while [[ ${localcount} -lt $((${s3count}-20)) ]]
+do
+  sleep 30
+  localcount=`find /var/www/vhosts/magento/httpdocs/media/ | wc -l`
+done
+if [[ ${localcount} -gt $((${s3count}-20)) ]]
+then
+  echo "<?php echo \"OK\"; ?>" > /var/www/vhosts/magento/httpdocs/rs-healthc.php
 fi
