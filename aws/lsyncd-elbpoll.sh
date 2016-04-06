@@ -72,7 +72,8 @@ then
   logfile    = \"/var/log/lsyncd/lsyncd.log\",
   statusFile = \"/var/log/lsyncd/lsyncd-status.log\",
   insist = 1,
-  statusInterval = 20
+  statusInterval = 20,
+  maxProcesses = 4
 }
 
 dofile(\"/etc/lsyncd-targets\")
@@ -85,6 +86,7 @@ sync {
     host=server,
     targetdir=\"/var/www/vhosts/\",
     excludeFrom=\"/etc/lsyncd-excludes\",
+    delay = 10,
     rsync = {
      archive = true,
      acls = true,
