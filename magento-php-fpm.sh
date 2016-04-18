@@ -293,7 +293,7 @@ then
   echo "[${DOMAINNAME}]
 listen = /var/run/php-fpm/${DOMAINNAME}.sock
 listen.owner = ${USERNAME}
-listen.group =${WEBSERVER}
+listen.group = ${WEBSERVER}
 listen.mode = 0660
 user = ${USERNAME}
 group = ${WEBSERVER}
