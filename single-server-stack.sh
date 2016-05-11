@@ -661,6 +661,6 @@ else
 fi
 
 echo "
-Redis is available on 127.0.0.1:6379 and /tmp/redis.sock
+Redis is available on 127.0.0.1:6379 and /var/run/redis/redis.sock
 Memcached is available on 127.0.0.1:11211
 "
