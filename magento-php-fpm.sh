@@ -270,7 +270,11 @@ echo -e "\nPHP configuration complete."
 
 php -v
 
+FPMGROUP="php-fpm"
 
+if [[ ${PHPVERS} -lt "5.6" ]]
+   FPMGROUP=${WEBSERVER}
+fi
 
 echo -e "\nConfiguring PHP-FPM..."
 if [[ ! -f /etc/php-fpm.d/${DOMAINNAME}.conf ]]
@@ -296,7 +300,7 @@ listen.owner = ${USERNAME}
 listen.group = ${WEBSERVER}
 listen.mode = 0660
 user = ${USERNAME}
-group = ${WEBSERVER}
+group = ${FPMGROUP}
 pm = dynamic
 pm.max_children = ${MAXCHILDREN}
 pm.start_servers = 30
@@ -314,14 +318,14 @@ listen.owner = ${USERNAME}
 listen.group =${WEBSERVER}
 listen.mode = 0660
 user = ${USERNAME}
-group = ${WEBSERVER}
+group = ${FPMGROUP}
 pm = ondemand
 pm.max_children = 20
 pm.max_requests = 50
 php_admin_value[error_log] = /var/log/php-fpm/${DOMAINNAME}-admin-error.log
 php_admin_flag[log_errors] = on
 php_admin_flag[zlib.output_compression] = Off
-php_admin_value[memory_limit] = 1024M" > /etc/php-fpm.d/${DOMAINNAME}-admin.conf
+php_admin_value[memory_limit] = 2048M" > /etc/php-fpm.d/${DOMAINNAME}-admin.conf
 
 
 
