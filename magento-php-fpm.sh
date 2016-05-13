@@ -272,7 +272,8 @@ php -v
 
 FPMGROUP="php-fpm"
 
-if [[ ${PHPVERS} -lt "5.6" ]]; then
+
+if [[ $(echo "$PHPVERS < 5.6" |bc -l) ]]; then
    FPMGROUP=${WEBSERVER}
 fi
 
