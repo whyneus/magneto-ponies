@@ -14,10 +14,10 @@ backend default {
 }
 
 acl purge {
- "127.0.0.1"
- "192.168.0.0"/16
- "172.24.0.0"/16
- "10.0.0.0"/8
+ "127.0.0.1";
+ "192.168.0.0"/16;
+ "172.24.0.0"/16;
+ "10.0.0.0"/8;
 }
 
 sub vcl_recv {
@@ -102,7 +102,7 @@ sub vcl_hash {
     }
 
     # To make sure http users don't see ssl warning
-    if (req.http.X-Forwarded-Proto {
+    if (req.http.X-Forwarded-Proto) {
         hash_data(req.http.X-Forwarded-Proto);
     }
     #/* {{ design_exceptions_code }} */
