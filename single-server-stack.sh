@@ -290,8 +290,8 @@ fi
 # Create the cron job, and the main Magento Cron while we're here
 echo "
 ## Main Magento cron job
-*/5 * * * * /bin/bash $HOMEDIR/httpdocs/cron.sh" >> /tmp/rediscron
-crontab -l -u $USERNAME | cat - /tmp/rediscron | crontab -u $USERNAME -
+*/5 * * * * /bin/bash $HOMEDIR/httpdocs/cron.sh" >> /tmp/magentocron
+crontab -l -u $USERNAME | cat - /tmp/magentocron | crontab -u $USERNAME -
 
 
 
