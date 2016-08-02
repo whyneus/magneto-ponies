@@ -658,3 +658,12 @@ echo "
 Redis is available on 127.0.0.1:6379 and /var/run/redis/redis.sock
 Memcached is available on 127.0.0.1:11211
 "
+
+
+# HANDOVER details
+
+if [[ $MAGENTO2 == true ]]; then
+    source <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/handover-magento2.sh)
+else 
+    source <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/handover-magento1.sh)
+fi
