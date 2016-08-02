@@ -158,6 +158,10 @@ fi
 # Add PORTSUFFIX to listen port
 sed -i s/^Listen\ 80$/Listen\ 80${PORTSUFFIX}/g /etc/httpd/conf/httpd.conf
 
+# DocRoot .../pub for Magento2
+if [[ MAGENTO2 == true ]]; then 
+   MAGE2PUB="/pub"
+fi
 
 HOSTNAME=`hostname`
 VHOSTEXISTS=`httpd -S 2>&1 | grep -v ${HOSTNAME} | grep ${DOMAINNAME}`
@@ -185,7 +189,7 @@ if [[ $MAJORVERS == "6" ]]; then
   echo "<VirtualHost *:80${PORTSUFFIX}>
   ServerName ${DOMAINNAME}
   ServerAlias www.${DOMAINNAME}
-  DocumentRoot ${DOCROOT}
+  DocumentRoot ${DOCROOT}${MAGE2PUB}
   SetEnvIf X-Forwarded-Proto https HTTPS=on
   <Directory ${DOCROOT}>
     AllowOverride All
@@ -220,12 +224,12 @@ if [[ $MAJORVERS == "6" ]]; then
   </IfModule>
 </VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
 
-MYIP=$(curl -s4 icanhazip.com);
+MYIP=$(curl -s4 icanhazip.com --max-time 3);
 
 echo "<VirtualHost *:443>
   ServerName ${DOMAINNAME}
   ServerAlias www.${DOMAINNAME} $MYIP
-  DocumentRoot ${DOCROOT}
+  DocumentRoot ${DOCROOT}${MAGE2PUB}
 
    SSLEngine On
    # Default certificates - swap for real ones when provided
@@ -287,7 +291,7 @@ mkdir -p /etc/httpd/vhosts.d
   echo "<VirtualHost *:80${PORTSUFFIX}>
   ServerName ${DOMAINNAME}
   ServerAlias www.${DOMAINNAME}
-  DocumentRoot ${DOCROOT}
+  DocumentRoot ${DOCROOT}${MAGE2PUB}
   SetEnvIf X-Forwarded-Proto https HTTPS=on
   <Directory ${DOCROOT}>
     AllowOverride All
@@ -317,12 +321,12 @@ mkdir -p /etc/httpd/vhosts.d
 
 </VirtualHost>" > /etc/httpd/vhosts.d/${DOMAINNAME}.conf
 
-MYIP=$(curl -s4 icanhazip.com);
+MYIP=$(curl -s4 icanhazip.com --max-time 3);
 
 echo "<VirtualHost *:443>
   ServerName ${DOMAINNAME}
   ServerAlias www.${DOMAINNAME} $MYIP
-  DocumentRoot ${DOCROOT}
+  DocumentRoot ${DOCROOT}${MAGE2PUB}
 
    SSLEngine On
    # Default certificates - swap for real ones when provided
