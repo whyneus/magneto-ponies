@@ -42,7 +42,7 @@ fi
 
 
 echo "Installing Redis from IUS..."
-yum -q -y install redis30u
+yum -q -y install redis32u
 
 echo "Configuring redis.conf"
 
@@ -55,7 +55,7 @@ sed -i 's/^save 900 1/# save 900 1/g' /etc/redis.conf
 sed -i 's/^save 300 10/# save 300 10/g' /etc/redis.conf
 sed -i 's/^save 60 10000/# save 60 10000/g' /etc/redis.conf
 
-sed -i '/^\# maxmemory <bytes>/a maxmemory 1GB' /etc/redis.conf
+sed -i '/^\# maxmemory <bytes>/a maxmemory 2147483648' /etc/redis.conf
 sed -i '/^\# maxmemory-policy noeviction/a maxmemory-policy allkeys-lru' /etc/redis.conf
 
 
