@@ -20,4 +20,4 @@ echo "
     compress
     missingok
 }
-" >> /etc/lodrotate.d/magento
+" >> /etc/logrotate.d/magento
