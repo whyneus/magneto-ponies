@@ -316,7 +316,7 @@ php_admin_flag[zlib.output_compression] = On" > /etc/php-fpm.d/${DOMAINNAME}.con
 echo "[${DOMAINNAME}-admin]
 listen = /var/run/php-fpm/${DOMAINNAME}-admin.sock
 listen.owner = ${USERNAME}
-listen.group =${WEBSERVER}
+listen.group = ${WEBSERVER}
 listen.mode = 0660
 user = ${USERNAME}
 group = ${FPMGROUP}
