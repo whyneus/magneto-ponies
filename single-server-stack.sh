@@ -522,6 +522,8 @@ then
   echo -ne "Creating database and user..."
   mysql -uroot -e "CREATE DATABASE \`${DBNAME}\`"
   mysql -uroot -e "GRANT ALL PRIVILEGES ON \`${DBNAME}\`.* to \`${USERNAME}\`@'localhost' IDENTIFIED BY '${MYSQLUSERPASS}'"
+  mysql -uroot -e "GRANT ALL PRIVILEGES ON \`${DBNAME}\`.* to \`${USERNAME}\`@'127.0.0.1' IDENTIFIED BY '${MYSQLUSERPASS}'"
+  mysql -uroot -e "GRANT ALL PRIVILEGES ON \`${DBNAME}\`.* to \`${USERNAME}\`@'::1'       IDENTIFIED BY '${MYSQLUSERPASS}'"
 fi
 
 
