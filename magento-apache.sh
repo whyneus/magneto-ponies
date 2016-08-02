@@ -85,6 +85,11 @@ if [[ -z ${GETENT} ]]; then
   NEWUSER=1
 fi
 
+# DocRoot .../pub for Magento2
+if [[ MAGENTO2 == true ]]; then 
+   MAGE2PUB="/pub"
+fi
+
 
 # Basic package installs 
 
@@ -157,11 +162,6 @@ fi
 
 # Add PORTSUFFIX to listen port
 sed -i s/^Listen\ 80$/Listen\ 80${PORTSUFFIX}/g /etc/httpd/conf/httpd.conf
-
-# DocRoot .../pub for Magento2
-if [[ MAGENTO2 == true ]]; then 
-   MAGE2PUB="/pub"
-fi
 
 HOSTNAME=`hostname`
 VHOSTEXISTS=`httpd -S 2>&1 | grep -v ${HOSTNAME} | grep ${DOMAINNAME}`
