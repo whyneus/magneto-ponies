@@ -597,7 +597,7 @@ fi
 
 
 ## Logrotate config
-source <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-logrorate.sh)
+source <(curl -s https://raw.githubusercontent.com/whyneus/magneto-ponies/master/magento-logrotate.sh)
 
 
 
