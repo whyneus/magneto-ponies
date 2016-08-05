@@ -57,8 +57,8 @@ if [[ $MAJORVERS == "6" ]]; then
 fi
 
 if [[ $MAJORVERS == "7" ]]; then
-
     sed -i s/^VARNISH_STORAGE=.*/VARNISH_STORAGE=\"malloc,${VARNISHMEMORY}M\"/g  /etc/varnish/varnish.params
+    sed -i s/^VARNISH_LISTEN_PORT.*/VARNISH_LISTEN_PORT=80/g /etc/varnish/varnish.params
 
    /bin/systemctl restart  varnish.service
    /bin/systemctl enable  varnish.service
