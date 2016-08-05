@@ -99,7 +99,7 @@ Paste the following into your app/etc/local.xml, before the </global> closing ta
         <cache>
             <backend>Cm_Cache_Backend_Redis</backend>
             <backend_options>
-                <server>/var/run/redis.sock</server>
+                <server>/var/run/redis/redis.sock</server>
     	        <port>6379</port>
                 <persistent></persistent> 
                 <database>1</database> 
@@ -120,7 +120,7 @@ Paste the following into your app/etc/local.xml, before the </global> closing ta
         <full_page_cache>
             <backend>Cm_Cache_Backend_Redis</backend>
             <backend_options>
-                <server>/var/run/redis.sock</server>
+                <server>/var/run/redis/redis.sock</server>
     	        <port>6379</port>
                 <persistent></persistent> 
                 <database>1</database> 
