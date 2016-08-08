@@ -53,7 +53,7 @@ read REMOTE_ADDR
 
 if [ -z "$REMOTE_ADDR" ]; then
    echo "Defaulting to 127.0.0.1 "
-   REQUEST_URI="127.0.0.1"
+   REMOTE_ADDR="127.0.0.1"
 fi
 
 export REMOTE_ADDR="$REMOTE_ADDR"
