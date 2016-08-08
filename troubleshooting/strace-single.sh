@@ -48,6 +48,16 @@ if [[ $b == "Y" || $b == "y" || $b = "yes" || $b = "on" || $b = "On" ]]; then
         export HTTPS=on
 fi
 
+echo -ne  "\nRemote Address (e.g. for geoIP purposes) [127.0.0.1] : "
+read REMOTE_ADDR
+
+if [ -z "$REMOTE_ADDR" ]; then
+   echo "Defaulting to 127.0.0.1 "
+   REQUEST_URI="127.0.0.1"
+fi
+
+export REMOTE_ADDR="$REMOTE_ADDR"
+
 
 
 echo -ne  "\nStrace output file name (leave blank for default /home/rack/<date>.strace) : "
