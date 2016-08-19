@@ -123,7 +123,7 @@ Paste the following into your app/etc/local.xml, before the </global> closing ta
                 <server>/var/run/redis/redis.sock</server>
     	        <port>6379</port>
                 <persistent></persistent> 
-                <database>1</database> 
+                <database>2</database> 
                 <password></password> 
                 <force_standalone>0</force_standalone>  
                 <connect_retries>1</connect_retries>    
