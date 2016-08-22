@@ -302,9 +302,13 @@ if [[ $DBSERVER == 1 ]]; then
 MEMORY=`cat /proc/meminfo | grep MemTotal | awk 'OFMT="%.0f" {sum=$2/1024/1024}; END {print sum}'`
 if [[ ${MEMORY} -lt 12 ]]
 then
-  INNODBMEM=`printf "%.0f" $(bc <<< ${MEMORY}*0.75)`
+  INNODBMEM=`printf "%.0f" $(bc <<< ${MEMORY}*0.75)`G
 else
-  INNODBMEM=6
+  INNODBMEM=6G
+fi
+if [[ ${MEMORY} -lt 2 ]]
+then
+INNODBMEM=256M
 fi
 
 PREPDIRCHECK=`ls /home/rack/ | grep magentodbsetup`
@@ -341,6 +345,8 @@ datadir                              = /var/lib/mysql
 socket                               = /var/lib/mysql/mysql.sock
 tmpdir                               = /dev/shm
 
+performance-schema		= OFF
+
 ## Cache
 table-definition-cache               = 4096
 table-open-cache                     = 4096
@@ -376,7 +382,7 @@ myisam-sort-buffer-size              = 256M
 
 ## InnoDB
 #innodb-autoinc-lock-mode            = 2
-innodb-buffer-pool-size              = ${INNODBMEM}G
+innodb-buffer-pool-size              = ${INNODBMEM}
 #innodb-file-format                  = Barracuda
 innodb-file-per-table                = 1
 innodb-log-file-size                 = 200M
