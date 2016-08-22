@@ -38,11 +38,10 @@ yum -y install varnish
 
 
 
-mv /etc/default/varnish.vcl /etc/default/varnish.vcl.packaged
-wget https://raw.githubusercontent.com/whyneus/magneto-ponies/master/m2-default.vcl -O /etc/default/varnish.vcl 
+mv /etc/varnish/default.vcl /etc/varnish/default.vcl.packaged
+wget https://raw.githubusercontent.com/whyneus/magneto-ponies/master/m2-default.vcl -O /etc/varnish/default.vcl 
 
-# Listen on port 80
-sed -i s/^VARNISH_LISTEN_PORT.*/VARNISH_LISTEN_PORT=80/g /etc/sysconfig/varnish
+
 
 # By default, use 1/4 of server memory
 MEMORY=$(free -m | grep ^Mem | awk '{print $2}')
@@ -50,6 +49,7 @@ VARNISHMEMORY=$(($MEMORY/4))
 
 if [[ $MAJORVERS == "6" ]]; then
 
+   sed -i s/^VARNISH_LISTEN_PORT.*/VARNISH_LISTEN_PORT=80/g /etc/sysconfig/varnish
    sed -i s/^VARNISH_STORAGE_SIZE.*/VARNISH_STORAGE_SIZE=${VARNISHMEMORY}M/g  /etc/sysconfig/varnish
 
    /etc/init.d/varnish restart
