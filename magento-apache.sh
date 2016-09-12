@@ -194,9 +194,8 @@ if [[ $MAJORVERS == "6" ]]; then
   <Directory ${DOCROOT}>
     AllowOverride All
     Options +FollowSymLinks
-    # Compress JS and CSS. HTML/PHP will be compressed by PHP. 
     <IfModule mod_deflate.c>
-        AddOutputFilterByType DEFLATE text/css text/javascript application/javascript
+        AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript
     </IfModule>
     ExpiresActive On
     ExpiresDefault \"access plus 1 month\"
@@ -240,9 +239,8 @@ echo "<VirtualHost *:443>
   <Directory ${DOCROOT}>
     AllowOverride All
     Options +FollowSymLinks
-    # Compress JS and CSS. HTML/PHP will be compressed by PHP. 
     <IfModule mod_deflate.c>
-        AddOutputFilterByType DEFLATE text/css text/javascript application/javascript
+        AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript
     </IfModule>
     ExpiresActive On
     ExpiresDefault \"access plus 1 month\"
@@ -296,9 +294,8 @@ mkdir -p /etc/httpd/vhosts.d
   <Directory ${DOCROOT}>
     AllowOverride All
     Options +FollowSymLinks
-    # Compress JS and CSS. HTML/PHP will be compressed by PHP. 
     <IfModule mod_deflate.c>
-        AddOutputFilterByType DEFLATE text/css text/javascript application/javascript
+        AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript
     </IfModule>
     ExpiresActive On
     ExpiresDefault \"access plus 1 month\"
@@ -337,9 +334,8 @@ echo "<VirtualHost *:443>
   <Directory ${DOCROOT}>
     AllowOverride All
     Options +FollowSymLinks
-    # Compress JS and CSS. HTML/PHP will be compressed by PHP. 
     <IfModule mod_deflate.c>
-        AddOutputFilterByType DEFLATE text/css text/javascript application/javascript
+        AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript
     </IfModule>
     ExpiresActive On
     ExpiresDefault \"access plus 1 month\"
