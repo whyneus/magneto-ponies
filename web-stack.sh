@@ -12,12 +12,22 @@ if [ "$EUID" -ne 0 ]
   exit 1
 fi
 
-MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-if [ "$MAJORVERS"  != 6 ]; then
-   echo "This script is for CentOS 6 / RHEL 6  only."
-   exit 1
+if [[ -e /etc/redhat-release ]]; then
+  RELEASERPM=$(rpm -qf /etc/redhat-release)
+  MAJORVERS=$(rpm -q --qf '%{VERSION}' $RELEASERPM)
+  case $MAJORVERS in
+    6)
+      echo "detected major version 6"
+      ;;
+    *)
+      echo "This script is for major version 6 only."
+      exit 1
+      ;;
+  esac
+else
+  echo "/etc/redhat-release not found"
+  exit 1
 fi
-echo "RHEL/CentOS 6 Confirmed."
 
 
 ## Environment check - Cloud or Dedicated?

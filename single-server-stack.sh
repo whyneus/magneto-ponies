@@ -12,12 +12,21 @@ if [ "$EUID" -ne 0 ]
   exit 1
 fi
 
-MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-if [[ "$MAJORVERS"  == "6" ]] || [[ "$MAJORVERS"  == "7" ]]; then
-   echo "RHEL/CentOS $MAJORVERS Confirmed."
+if [[ -e /etc/redhat-release ]]; then
+  RELEASERPM=$(rpm -qf /etc/redhat-release)
+  MAJORVERS=$(rpm -q --qf '%{VERSION}' $RELEASERPM)
+  case $MAJORVERS in
+    6)
+      echo "detected major version 6"
+      ;;
+    *)
+      echo "This script is for major version 6 only."
+      exit 1
+      ;;
+  esac
 else
-   echo "This script is for RHEL/CentOS 6 or 7 only."
-   exit 1
+  echo "/etc/redhat-release not found"
+  exit 1
 fi
 
 
