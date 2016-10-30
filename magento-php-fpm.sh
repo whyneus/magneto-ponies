@@ -16,6 +16,20 @@ fi
 
 if [[ -e /etc/redhat-release ]]; then
   RELEASERPM=$(rpm -qf /etc/redhat-release)
+  case $RELEASERPM in
+    redhat*)
+      echo "detected RHEL"
+      OS=rhel
+      ;;
+    centos*)
+      echo "detected CentOS"
+      OS=centos
+      ;;
+    *)
+      echo "This script is for RHEL or CentOS only."
+      exit 1
+      ;;
+  esac
   MAJORVERS=$(rpm -q --qf '%{VERSION}' $RELEASERPM)
   case $MAJORVERS in
     6)
