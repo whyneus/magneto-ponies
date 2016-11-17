@@ -29,12 +29,38 @@ fi
 
 
 
-MAJORVERS=$(head -1 /etc/redhat-release | cut -d"." -f1 | egrep -o '[0-9]')
-if [[ "$MAJORVERS"  == "6" ]] || [[ "$MAJORVERS"  == "7" ]]; then
-   echo "RHEL/CentOS $MAJORVERS Confirmed."
+if [[ -e /etc/redhat-release ]]; then
+  RELEASERPM=$(rpm -qf /etc/redhat-release)
+  case $RELEASERPM in
+    redhat*)
+      echo "detected RHEL"
+      OS=rhel
+      ;;
+    centos*)
+      echo "detected CentOS"
+      OS=centos
+      ;;
+    *)
+      echo "This script is for RHEL or CentOS only."
+      exit 1
+      ;;
+  esac
+  MAJORVERS=$(rpm -q --qf '%{VERSION}' $RELEASERPM)
+  case $MAJORVERS in
+    6)
+      echo "detected major version 6"
+      ;;
+    7)
+      echo "detected major version 7"
+      ;;
+    *)
+      echo "This script is for major version 6 or 7 only."
+      exit 1
+      ;;
+  esac
 else
-   echo "This script is for RHEL/CentOS 6 or 7 only."
-   exit 1
+  echo "/etc/redhat-release not found"
+  exit 1
 fi
 
 
@@ -74,9 +100,8 @@ else
       exit 1
   else
       # Cloud server - install IUS from repo
-      iusrelease=$(curl -s http://dl.iuscommunity.org/pub/ius/stable/CentOS/$MAJORVERS/x86_64/ | egrep -o 'href="ius-release.*rpm"' | cut -d'"' -f2)
       echo " - installing ius-release..."
-      yum -q -y install http://dl.iuscommunity.org/pub/ius/stable/CentOS/$MAJORVERS/x86_64/$iusrelease      
+      yum -q -y install https://$OS$MAJORVERS.iuscommunity.org/ius-release.rpm
       rpm --import /etc/pki/rpm-gpg/IUS-COMMUNITY-GPG-KEY
   fi
 fi
