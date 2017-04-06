@@ -33,10 +33,11 @@ if [[ -e /etc/redhat-release ]]; then
     6)
       echo "detected major version 6"
       ;;
-    *)
-      echo "This script is for major version 6 only."
-      exit 1
+    7)
+      echo "detected major version 7"
       ;;
+    *)
+      echo "This script is for major version 6 or 7 only."
   esac
 else
   echo "/etc/redhat-release not found"
