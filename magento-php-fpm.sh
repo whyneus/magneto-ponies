@@ -32,10 +32,10 @@ if [[ -e /etc/redhat-release ]]; then
   esac
   MAJORVERS=$(rpm -q --qf '%{VERSION}' $RELEASERPM)
   case $MAJORVERS in
-    6)
+    6|6Server)
       echo "detected major version 6"
       ;;
-    7)
+    7|7Server)
       echo "detected major version 7"
       ;;
     *)
